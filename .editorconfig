@@ -1,0 +1,23 @@
+# EditorConfig helps developers define and maintain consistent
+# coding styles between different editors and IDEs
+# editorconfig.org
+
+root = true
+
+
+[*]
+
+# Coding style. Corresponds to the eslint rules.
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+# Common safety. Keep these unchanged.
+end_of_line = lf
+charset = utf-8
+insert_final_newline = true
+
+
+# In Markdown, trailing whitespace has special meaning.
+[*.md]
+trim_trailing_whitespace = false

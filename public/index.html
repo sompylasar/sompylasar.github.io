@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en" class="sompylasar-website-html">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
+    <title>Front-end Software Engineer Ivan Babak aka @sompylasar</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700,400italic" rel="stylesheet">
+    <style>
+      .sompylasar-website-html,
+      .sompylasar-website-html-body {
+        margin: 0;
+        padding: 0;
+        background: #0a0e23;
+        color: #eceff1;
+        font-family: Roboto, sans-serif;
+        font-weight: normal;
+        font-size: 16px;
+        line-height: 1.2em;
+        text-align: center;
+      }
+
+      .sompylasar-website-html * {
+        box-sizing: border-box;
+      }
+
+      .sompylasar-website-top {
+        display: flex;
+        flex-flow: column;
+        align-items: center;
+        justify-content: center;
+        width: 360px;
+        max-width: 100%;
+        min-height: 100vh;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+      .sompylasar-website-top__avatar-container {
+        padding: 16px 16px 16px;
+        max-width: 100%;
+        text-align: center;
+      }
+      .sompylasar-website-top__intro-container {
+        padding: 0 16px 16px;
+        max-width: 100%;
+        text-align: center;
+      }
+
+      .sompylasar-website-intro {
+      }
+      .sompylasar-website-intro__heading {
+        margin: 0;
+        padding: 0 0 16px;
+        font-weight: normal;
+        font-size: 26px;
+        line-height: 32px;
+      }
+      .sompylasar-website-intro__bio-container {
+        margin: 0 auto;
+        font-weight: normal;
+        opacity: 0.8;
+      }
+      .sompylasar-website-intro__contacts-container {
+        display: inline-block;
+        vertical-align: bottom;
+        margin: 0 auto;
+        padding: 24px 0 8px;
+      }
+      .sompylasar-website-intro__cv-container {
+        margin: 0 auto;
+        padding: 0 0 16px;
+        font-size: 12px;
+        line-height: 16px;
+        transition-property: opacity;
+        transition-duration: 0.3s;
+        transition-timing-function: linear;
+      }
+      .sompylasar-website-intro__contacts-and-cv-container {
+      }
+      .sompylasar-website-intro__contacts-and-cv-container:hover .sompylasar-website-intro__cv-container {
+        opacity: 0.5;
+      }
+      .sompylasar-website-intro__contacts-and-cv-container:hover .sompylasar-website-intro__cv-container:hover {
+        opacity: 1.0;
+      }
+      .sompylasar-website-intro__learn-more-container {
+        margin: 0 auto;
+        opacity: 0.5;
+      }
+
+      .sompylasar-website-avatar {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+        width: 140px;
+        max-width: 100%;
+        overflow: hidden;
+        border: 4px solid #eceff1;
+        border-radius: 50%;
+      }
+      .sompylasar-website-avatar__stretch {
+        position: relative;
+        padding-bottom: 100%;
+      }
+      .sompylasar-website-avatar__image {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        max-width: 100%;
+        height: auto;
+      }
+
+      .sompylasar-website-link {
+        color: #eceff1;
+        border-bottom: 1px solid rgba(236,239,241,0.5);
+        text-decoration: none;
+        transition-property: color, border-color;
+        transition-duration: 0.3s;
+        transition-timing-function: linear;
+        cursor: pointer;
+      }
+      .sompylasar-website-link:hover {
+        color: #eceff1;
+        border-bottom-color: rgba(255,255,255,0.7);
+      }
+
+      .sompylasar-website-link.sompylasar-website-name-translation {
+        border-bottom-style: dotted;
+      }
+
+      .sompylasar-website-icon {
+        display: inline-block;
+        vertical-align: baseline;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #eceff1 no-repeat center center;
+        background-size: 24px;
+      }
+      .sompylasar-website-icon-linkedin {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%230a0e23' d='M21 21h-4v-6.75c0-1.06-1.19-1.94-2.25-1.94S13 13.19 13 14.25V21H9V9h4v2c.66-1.07 2.36-1.76 3.5-1.76 2.5 0 4.5 2.04 4.5 4.51V21M7 21H3V9h4v12M5 3a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2z'/%3E%3C/svg%3E");
+      }
+      .sompylasar-website-icon-github {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%230a0e23' d='M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z'/%3E%3C/svg%3E");
+      }
+      .sompylasar-website-icon-stackoverflow {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%230a0e23' d='M17.36 20.2v-5.38h1.79V22H3v-7.18h1.8v5.38h12.56M6.77 14.32l.37-1.76 8.79 1.85-.37 1.76-8.79-1.85m1.16-4.21l.76-1.61 8.14 3.78-.76 1.62-8.14-3.79m2.26-3.99l1.15-1.38 6.9 5.76-1.15 1.37-6.9-5.75m4.45-4.25L20 9.08l-1.44 1.07-5.36-7.21 1.44-1.07M6.59 18.41v-1.8h8.98v1.8H6.59z'/%3E%3C/svg%3E");
+      }
+      .sompylasar-website-icon-facebook {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%230a0e23' d='M17 2v4h-2c-.69 0-1 .81-1 1.5V10h3v4h-3v8h-4v-8H7v-4h3V6a4 4 0 0 1 4-4h3z'/%3E%3C/svg%3E");
+      }
+      .sompylasar-website-icon-email {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 14H4V8l8 5 8-5v10m0-12l-8 5-8-5h16z'/%3E%3C/svg%3E");
+      }
+
+      .sompylasar-website-contacts {
+        display: inline-block;
+        vertical-align: top;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        white-space: nowrap;
+      }
+      .sompylasar-website-contacts__item {
+        display: inline-block;
+        vertical-align: top;
+        margin: 0;
+        padding: 0 4px;
+      }
+
+      .sompylasar-website-contact {
+        display: inline-block;
+        vertical-align: bottom;
+        overflow: hidden;
+        width: 32px;
+        color: #eceff1;
+        text-align: center;
+        text-decoration: none;
+        transition-property: width;
+        transition-duration: 0.3s;
+        transition-timing-function: ease-in;
+        transition-delay: 0.2s;
+        cursor: pointer;
+      }
+      .sompylasar-website-contact__icon {
+        display: block;
+        margin: 0 auto;
+        padding: 8px 0 0;
+        width: 32px;
+        height: 52px;
+        transition-property: width;
+        transition-duration: 0.3s;
+        transition-timing-function: ease-in;
+        transition-delay: 0.2s;
+      }
+      .sompylasar-website-contact__icon .sompylasar-website-icon {
+        -webkit-transform: scale(1.0);
+        -ms-transform: scale(1.0);
+        transform: scale(1.0);
+        transition-property: -webkit-transform, -ms-transform, transform;
+        transition-duration: 0.3s;
+        transition-timing-function: ease-in;
+        transition-delay: 0s;
+      }
+      .sompylasar-website-contact__text {
+        position: relative;
+        left: -30px;
+        display: block;
+        margin: 0 auto;
+        width: 100px;
+        font-size: 12px;
+        line-height: 16px;
+        opacity: 0;
+        -webkit-transform: scale(0.8);
+        -ms-transform: scale(0.8);
+        transform: scale(0.8);
+        transition-property: opacity, left, -webkit-transform, -ms-transform, transform;
+        transition-duration: 0.2s, 0.3s;
+        transition-timing-function: ease-in;
+        transition-delay: 0.2s;
+      }
+      .sompylasar-website-contact:hover {
+        width: 100px;
+        transition-timing-function: ease-out;
+        transition-delay: 0s;
+      }
+      .sompylasar-website-contact:hover .sompylasar-website-contact__icon {
+        width: 48px;
+        transition-timing-function: ease-out;
+        transition-delay: 0s;
+      }
+      .sompylasar-website-contact:hover .sompylasar-website-contact__icon .sompylasar-website-icon {
+        -webkit-transform: scale(1.4);
+        -ms-transform: scale(1.4);
+        transform: scale(1.4);
+      }
+      .sompylasar-website-contact:hover .sompylasar-website-contact__text {
+        left: 0;
+        opacity: 1;
+        -webkit-transform: scale(1.0);
+        -ms-transform: scale(1.0);
+        transform: scale(1.0);
+        transition-duration: 0.2s, 0.3s;
+        transition-timing-function: ease-out;
+        transition-delay: 0.2s, 0s;
+      }
+
+      .sompylasar-website-intro-learn-more-noscript {
+        font-size: 12px;
+        line-height: 16px;
+      }
+    </style>
+  </head>
+  <body class="sompylasar-website-html-body">
+    <div class="sompylasar-website-top">
+      <div class="sompylasar-website-top__avatar-container">
+        <div class="sompylasar-website-avatar">
+          <div class="sompylasar-website-avatar__stretch">
+            <img class="sompylasar-website-avatar__image"
+              alt="Ivan Babak’s photo"
+              src="%PUBLIC_URL%/assets/sompylasar.png"
+            >
+          </div>
+        </div>
+      </div>
+      <div class="sompylasar-website-top__intro-container">
+        <div class="sompylasar-website-intro">
+          <h1 class="sompylasar-website-intro__heading">
+            Hi, my&nbsp;name&nbsp;is <span class="sompylasar-website-link sompylasar-website-name-translation" title="or John">Ivan</span>&nbsp;Babak
+          </h1>
+          <div class="sompylasar-website-intro__bio-container">
+            I’m a&nbsp;professional front-end software engineer,
+            expert in&nbsp;architecting, building, and&nbsp;maintaining
+            complex web&nbsp;applications and&nbsp;components.
+          </div>
+          <div class="sompylasar-website-intro__contacts-and-cv-container">
+            <div class="sompylasar-website-intro__contacts-container">
+              <ul class="sompylasar-website-contacts">
+                <li class="sompylasar-website-contacts__item">
+                  <a class="sompylasar-website-contact" href="https://www.linkedin.com/in/ivanbabak/" target="_blank">
+                    <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-linkedin"></i></span>
+                    <span class="sompylasar-website-contact__text">LinkedIn</span>
+                  </a>
+                </li>
+                <li class="sompylasar-website-contacts__item">
+                  <a class="sompylasar-website-contact" href="https://github.com/sompylasar" target="_blank">
+                    <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-github"></i></span>
+                    <span class="sompylasar-website-contact__text">GitHub</span>
+                  </a>
+                </li>
+                <li class="sompylasar-website-contacts__item">
+                  <a class="sompylasar-website-contact" href="http://stackoverflow.com/users/1346510/sompylasar" target="_blank">
+                    <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-stackoverflow"></i></span>
+                    <span class="sompylasar-website-contact__text">StackOverflow</span>
+                  </a>
+                </li>
+                <li class="sompylasar-website-contacts__item">
+                  <a class="sompylasar-website-contact" href="https://www.facebook.com/babak.john" target="_blank">
+                    <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-facebook"></i></span>
+                    <span class="sompylasar-website-contact__text">Facebook</span>
+                  </a>
+                </li>
+                <li class="sompylasar-website-contacts__item">
+                  <a class="sompylasar-website-contact" href="mailto:babak.john@gmail.com" target="_blank">
+                    <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-email"></i></span>
+                    <span class="sompylasar-website-contact__text">Email</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="sompylasar-website-intro__cv-container">
+              <a class="sompylasar-website-link" href="%PUBLIC_URL%/assets/Ivan_Babak_CV_20161227.pdf" target="_blank">Download CV (pdf)</a>
+            </div>
+          </div>
+          <div class="sompylasar-website-intro__learn-more-container">
+            <noscript>
+              <div class="sompylasar-website-intro-learn-more-noscript">
+                You’ve got JavaScript disabled in&nbsp;your browser.<br>
+                Get back with <a class="sompylasar-website-link" href="https://whatbrowser.org/intl/en/" target="_blank">a&nbsp;modern browser with&nbsp;JavaScript&nbsp;enabled</a> to&nbsp;learn more.
+              </div>
+            </noscript>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        document.addEventListener && document.addEventListener('click', function (event) {
+          var target = event.target;
+          while (target && !/\bsompylasar-website-name-translation\b/.test(target.className)) {
+            target = target.parentNode;
+          }
+          if (target) {
+            if (target.innerText === 'Ivan') {
+              target.innerText = 'John';
+              target.setAttribute('title', 'or Ivan');
+            }
+            else if (target.innerText === 'John') {
+              target.innerText = 'Ivan';
+              target.setAttribute('title', 'or John');
+            }
+          }
+        });
+      }());
+    </script>
+    <div class="sompylasar-website-bottom" id="root"></div>
+  </body>
+</html>
