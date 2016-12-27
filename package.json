@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "@sompylasar's website. https://sompylasar.github.io/",
   "homepage": "https://sompylasar.github.io/",
-  "repository": "https://github.com/sompylasar/sompylasar.github.io.git",
+  "repository": "git@github.com:sompylasar/sompylasar.github.io.git",
   "author": "John Babak <babak.john@gmail.com>",
   "license": "MIT",
   "bugs": {

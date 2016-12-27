@@ -113,7 +113,6 @@ function deploy() {
     },
     {
       title: 'Pushing...',
-      skip: () => true,  // TODO(@sompylasar): Remove when ready.
       task: () => execa('git', [ 'push', '--force', repositoryUrl, 'master:' + deployBranch ], { cwd: buildDirPath }),
     },
   ]);
