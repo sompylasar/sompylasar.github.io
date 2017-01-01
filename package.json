@@ -15,8 +15,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "deploy": "node ./scripts/deploy.js",
-    "build-deploy": "yarn run build && yarn run deploy"
+    "deploy": "yarn run build && node ./scripts/deploy.js"
   },
   "devDependencies": {
     "cross-env": "^3.1.3",
