@@ -252,19 +252,26 @@
       }
     </style>
     <script>
-      (/^sompylasar\.github\.io$/.test(window.location.host)?
-        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        })(window,document,'script','https://www.google-analytics.com/analytics.js','ga')
-      :
-        (function(s,o,m,p,y,l,a){
-        s[o]=s[o]||{},s[o][m]=s[o][m]||function(){},
-        s[p]=function(){s[o][m]('📈',(+new Date),p,y.call(arguments))}
-        })(window,'console','log','ga',[].slice)
+      (function(s,o,m,p,y,l,a,s_,a_,r_,i_,o_){r_=[
+      'https://www.google-analytics.com/analytics'+(s_?'_debug':'')+'.js',
+      'https://unpkg.com/autotrack@1.0.3/autotrack.js'];
+      o_=function(u,a,b){return u?(a=o.createElement(m),b=o.getElementsByTagName(m)[0],a.async=1,a.src=u,b.parentNode.insertBefore(a,b),1):0};
+      o_(r_[0]),o_(r_[1]);
+      s[p]=s[p]||{},s[p][y]=s[p][y]||function(){};
+      s['GoogleAnalyticsObject']=l;s[l]=s[l]||function(){s[p][y]('📈',(+new Date),l,a.call(arguments)),(s[l].q=s[l].q||[]).push(arguments)},s[l].l=1*new Date();
+      s_&&(s['ga_debug']={trace:!0});
+      ga('create',a_,'auto');
+      s_&&ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitType'),m.get('eventCategory'),m.get('eventAction'),m.get('eventLabel'),m)});
+      ga('require','cleanUrlTracker',{stripQuery:!1,indexFilename:'index.html',trailingSlash:'remove'});
+      ga('require','eventTracker',{events:['click'],attributePrefix:'data-autotrack-',fieldsObj:{eventCategory:'autotrack'}});
+      ga('require','pageVisibilityTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'pagevisibility-change',nonInteraction:null}});
+      ga('require','outboundLinkTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'outbound-link-click'}});
+      ga('send','pageview');
+      ga('send','event','default','pageview');
+      })(window,document,'script','console','log','ga',[].slice,
+        !/^sompylasar\.github\.io$/.test(window.location.host),
+        'UA-89593101-1'
       );
-      ga('create', 'UA-89593101-1', 'auto');
-      ga('send', 'pageview');
     </script>
   </head>
   <body class="sompylasar-website-html-body">
@@ -282,7 +289,7 @@
       <div class="sompylasar-website-top__intro-container">
         <div class="sompylasar-website-intro">
           <h1 class="sompylasar-website-intro__heading">
-            Hi, my&nbsp;name&nbsp;is <span class="sompylasar-website-link sompylasar-website-name-translation" title="or John">Ivan</span>&nbsp;Babak
+            Hi, my&nbsp;name&nbsp;is <span class="sompylasar-website-link sompylasar-website-name-translation" title="or John" data-autotrack-on="click" data-autotrack-event-action="intro-name-translation-click">Ivan</span>&nbsp;Babak
           </h1>
           <div class="sompylasar-website-intro__bio-container">
             I’m a&nbsp;professional frontend software engineer,
@@ -293,31 +300,31 @@
             <div class="sompylasar-website-intro__contacts-container">
               <ul class="sompylasar-website-contacts">
                 <li class="sompylasar-website-contacts__item">
-                  <a class="sompylasar-website-contact" href="https://www.linkedin.com/in/ivanbabak/" target="_blank">
+                  <a class="sompylasar-website-contact" href="https://www.linkedin.com/in/ivanbabak/" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-contacts-linkedin-click">
                     <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-linkedin"></i></span>
                     <span class="sompylasar-website-contact__text">LinkedIn</span>
                   </a>
                 </li>
                 <li class="sompylasar-website-contacts__item">
-                  <a class="sompylasar-website-contact" href="https://github.com/sompylasar" target="_blank">
+                  <a class="sompylasar-website-contact" href="https://github.com/sompylasar" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-contacts-github-click">
                     <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-github"></i></span>
                     <span class="sompylasar-website-contact__text">GitHub</span>
                   </a>
                 </li>
                 <li class="sompylasar-website-contacts__item">
-                  <a class="sompylasar-website-contact" href="https://stackoverflow.com/users/1346510/sompylasar" target="_blank">
+                  <a class="sompylasar-website-contact" href="https://stackoverflow.com/users/1346510/sompylasar" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-contacts-stackoverflow-click">
                     <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-stackoverflow"></i></span>
                     <span class="sompylasar-website-contact__text">StackOverflow</span>
                   </a>
                 </li>
                 <li class="sompylasar-website-contacts__item">
-                  <a class="sompylasar-website-contact" href="https://www.facebook.com/babak.john" target="_blank">
+                  <a class="sompylasar-website-contact" href="https://www.facebook.com/babak.john" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-contacts-facebook-click">
                     <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-facebook"></i></span>
                     <span class="sompylasar-website-contact__text">Facebook</span>
                   </a>
                 </li>
                 <li class="sompylasar-website-contacts__item">
-                  <a class="sompylasar-website-contact" href="mailto:babak.john@gmail.com" target="_blank">
+                  <a class="sompylasar-website-contact" href="mailto:babak.john@gmail.com" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-contacts-email-click">
                     <span class="sompylasar-website-contact__icon"><i class="sompylasar-website-icon sompylasar-website-icon-email"></i></span>
                     <span class="sompylasar-website-contact__text">Email</span>
                   </a>
@@ -325,7 +332,7 @@
               </ul>
             </div>
             <div class="sompylasar-website-intro__cv-container">
-              <a class="sompylasar-website-link" href="%PUBLIC_URL%/assets/Ivan_Babak_CV_20161227.pdf" target="_blank">Download CV (pdf)</a>
+              <a class="sompylasar-website-link" href="%PUBLIC_URL%/assets/Ivan_Babak_CV_20161227.pdf" target="_blank" data-autotrack-on="click" data-autotrack-event-action="intro-download-cv-click">Download CV (pdf)</a>
             </div>
           </div>
           <div class="sompylasar-website-intro__learn-more-container">
@@ -360,5 +367,11 @@
       }());
     </script>
     <div class="sompylasar-website-bottom" id="root"></div>
+    <noscript>
+      <div style="position: absolute; top: -9999px; left: -9999px;">
+        <img src="https://www.google-analytics.com/collect?v=1&tid=UA-89593101-1&cid=&t=pageview&ds=web&z=3.14159" />
+        <img src="https://www.google-analytics.com/collect?v=1&tid=UA-89593101-1&cid=&t=event&ec=default&ea=pageview-noscript&ds=web&z=3.14159" />
+      </div>
+    </noscript>
   </body>
 </html>
