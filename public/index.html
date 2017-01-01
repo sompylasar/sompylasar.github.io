@@ -261,14 +261,16 @@
       s['GoogleAnalyticsObject']=l;s[l]=s[l]||function(){s[p][y]('📈',(+new Date),l,a.call(arguments)),(s[l].q=s[l].q||[]).push(arguments)},s[l].l=1*new Date();
       s_&&(s['ga_debug']={trace:!0});
       ga('create',a_,'auto');
-      o_=ga('get','sendHitTask');
-      ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitPayload'),m),(!s_&&o_(m))});
+      ga(function(t,t_){
+      t_=t.get('sendHitTask');
+      ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitPayload'),m),(!s_&&t_(m))});
       ga('require','cleanUrlTracker',{stripQuery:!1,indexFilename:'index.html',trailingSlash:'remove'});
       ga('require','eventTracker',{events:['click'],attributePrefix:'data-autotrack-',fieldsObj:{eventCategory:'autotrack'}});
       ga('require','pageVisibilityTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'pagevisibility-change',nonInteraction:null}});
       ga('require','outboundLinkTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'outbound-link-click'}});
       ga('send','pageview');
       ga('send','event','default','pageview');
+      });
       })(window,document,'script','console','log','ga',[].slice,
         !/^sompylasar\.github\.io$/.test(window.location.host),
         'UA-89593101-1'
