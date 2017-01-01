@@ -255,13 +255,14 @@
       (function(s,o,m,p,y,l,a,s_,a_,r_,i_,o_){r_=[
       'https://www.google-analytics.com/analytics'+(s_?'_debug':'')+'.js',
       'https://unpkg.com/autotrack@1.0.3/autotrack.js'];
-      o_=function(u,a,b){return u?(a=o.createElement(m),b=o.getElementsByTagName(m)[0],a.async=1,a.src=u,b.parentNode.insertBefore(a,b),1):0};
-      o_(r_[0]),o_(r_[1]);
+      i_=function(u,a,b){return u?(a=o.createElement(m),b=o.getElementsByTagName(m)[0],a.async=1,a.src=u,b.parentNode.insertBefore(a,b),1):0};
+      i_(r_[0]),i_(r_[1]);
       s[p]=s[p]||{},s[p][y]=s[p][y]||function(){};
       s['GoogleAnalyticsObject']=l;s[l]=s[l]||function(){s[p][y]('📈',(+new Date),l,a.call(arguments)),(s[l].q=s[l].q||[]).push(arguments)},s[l].l=1*new Date();
       s_&&(s['ga_debug']={trace:!0});
       ga('create',a_,'auto');
-      s_&&ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitType'),m.get('eventCategory'),m.get('eventAction'),m.get('eventLabel'),m)});
+      o_=ga('get','sendHitTask');
+      ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitPayload'),m),(!s_&&o_(m))});
       ga('require','cleanUrlTracker',{stripQuery:!1,indexFilename:'index.html',trailingSlash:'remove'});
       ga('require','eventTracker',{events:['click'],attributePrefix:'data-autotrack-',fieldsObj:{eventCategory:'autotrack'}});
       ga('require','pageVisibilityTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'pagevisibility-change',nonInteraction:null}});
