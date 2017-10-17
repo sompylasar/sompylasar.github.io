@@ -25,6 +25,8 @@
     "rimraf": "2.6.2"
   },
   "dependencies": {
+    "aframe": "^0.7.0",
+    "aframe-react": "^4.3.0",
     "debug": "3.1.0",
     "prop-types": "15.6.0",
     "react": "16.0.0",

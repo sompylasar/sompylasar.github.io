@@ -30,7 +30,7 @@
         box-sizing: border-box;
       }
 
-      .sompylasar-website-top {
+      .sompylasar-website-static {
         display: flex;
         flex-flow: column;
         align-items: center;
@@ -41,12 +41,12 @@
         margin: 0 auto;
         overflow: hidden;
       }
-      .sompylasar-website-top__avatar-container {
+      .sompylasar-website-static__avatar-container {
         padding: 16px 16px 16px;
         max-width: 100%;
         text-align: center;
       }
-      .sompylasar-website-top__intro-container {
+      .sompylasar-website-static__intro-container {
         padding: 0 16px 16px;
         max-width: 100%;
         text-align: center;
@@ -304,6 +304,18 @@
         font-size: 12px;
         line-height: 16px;
       }
+
+      .a-body .sompylasar-website-static {
+        display: none;
+      }
+      .a-body .sompylasar-website-vr {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+      }
     </style>
     <script>
       (function(s,o,m,p,y,l,a,s_,a_,r_,i_,o_){r_=[
@@ -312,12 +324,12 @@
       i_=function(u,a,b){return u?(a=o.createElement(m),b=o.getElementsByTagName(m)[0],a.async=1,a.src=u,b.parentNode.insertBefore(a,b),1):0};
       i_(r_[0]),i_(r_[1]);
       s[p]=s[p]||{},s[p][y]=s[p][y]||function(){};
-      s['GoogleAnalyticsObject']=l;s[l]=s[l]||function(){s[p][y]('📈',(+new Date),l,a.call(arguments)),(s[l].q=s[l].q||[]).push(arguments)},s[l].l=1*new Date();
+      s['GoogleAnalyticsObject']=l;s[l]=s[l]||function(){s_&&s[p][y]('📈',(+new Date),l,a.call(arguments)),(s[l].q=s[l].q||[]).push(arguments)},s[l].l=1*new Date();
       s_&&(s['ga_debug']={trace:!0});
       ga('create',a_,'auto');
       ga(function(t,t_){
       t_=t.get('sendHitTask');
-      ga('set','sendHitTask',function(m){s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitPayload'),m),(!s_&&t_(m))});
+      ga('set','sendHitTask',function(m){s_&&s[p][y]('📈',(+new Date),l+' sendHitTask',m.get('hitPayload'),m),(!s_&&t_(m))});
       ga('require','cleanUrlTracker',{stripQuery:!1,indexFilename:'index.html',trailingSlash:'remove'});
       ga('require','eventTracker',{events:['click'],attributePrefix:'data-autotrack-',fieldsObj:{eventCategory:'autotrack'}});
       ga('require','pageVisibilityTracker',{fieldsObj:{eventCategory:'autotrack',eventAction:'pagevisibility-change',nonInteraction:null}});
@@ -326,25 +338,25 @@
       ga('send','event','default','pageview');
       });
       })(window,document,'script','console','log','ga',[].slice,
-        !/^sompylasar\.github\.io$/.test(window.location.host),
+        !/^sompylasar\.github\.io$/.test(window.location.host) && /[?&]gadebug([&]|$)/.test(window.location.search),
         'UA-89593101-1'
       );
     </script>
   </head>
   <body class="sompylasar-website-html-body">
-    <div class="sompylasar-website-top">
-      <div class="sompylasar-website-top__avatar-container">
+    <div class="sompylasar-website-static">
+      <div class="sompylasar-website-static__avatar-container">
         <div class="sompylasar-website-avatar">
           <div class="sompylasar-website-avatar__stretch">
             <img class="sompylasar-website-avatar__image"
               alt="Ivan Babak’s photo"
               src="%PUBLIC_URL%/assets/sompylasar.png"
             >
-            <span class="sompylasar-website-avatar__vr"></span>
+            <span class="sompylasar-website-avatar__vr" id="sompylasar-website-enter-vr"></span>
           </div>
         </div>
       </div>
-      <div class="sompylasar-website-top__intro-container">
+      <div class="sompylasar-website-static__intro-container">
         <div class="sompylasar-website-intro">
           <h1 class="sompylasar-website-intro__heading">
             Ivan&nbsp;Babak
@@ -424,7 +436,7 @@
         </div>
       </div>
     </div>
-    <div class="sompylasar-website-bottom" id="root"></div>
+    <div class="sompylasar-website-vr" id="sompylasar-website-vr" style="display: none;"></div>
     <noscript>
       <div style="position: absolute; top: -9999px; left: -9999px;">
         <img src="https://www.google-analytics.com/collect?v=1&tid=UA-89593101-1&cid=&t=pageview&ds=web&z=3.14159" />
