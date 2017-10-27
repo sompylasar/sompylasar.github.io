@@ -18,15 +18,15 @@
     "deploy": "yarn run build && node ./scripts/deploy.js"
   },
   "devDependencies": {
-    "cross-env": "5.0.5",
-    "custom-react-scripts": "0.2.0",
+    "cross-env": "5.1.0",
+    "custom-react-scripts": "0.2.1",
     "execa": "0.8.0",
-    "listr": "0.12.0",
+    "listr": "0.13.0",
     "rimraf": "2.6.2"
   },
   "dependencies": {
-    "aframe": "^0.7.0",
-    "aframe-react": "^4.3.0",
+    "aframe": "0.7.1",
+    "aframe-react": "4.3.0",
     "debug": "3.1.0",
     "prop-types": "15.6.0",
     "react": "16.0.0",
