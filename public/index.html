@@ -40,6 +40,13 @@
         min-height: 100vh;
         margin: 0 auto;
         overflow: hidden;
+        opacity: 1.0;
+        transform-origin: 50% 150px;
+        transform: scale(1.0);
+        transition-property: opacity, transform;
+        transition-duration: 0.3s;
+        transition-timing-function: ease-in;
+        will-change: opacity, transform;
       }
       .sompylasar-website-static__avatar-container {
         padding: 16px 16px 16px;
@@ -133,8 +140,9 @@
         transition-property: opacity;
         transition-duration: 0.3s;
         transition-timing-function: linear;
+        user-select: none;
       }
-      .sompylasar-website-avatar__vr:hover {
+      .sompylasar-website-avatar__vr.sompylasar-website-avatar__vr--visible {
         opacity: 1.0;
       }
 
@@ -305,16 +313,28 @@
         line-height: 16px;
       }
 
+      .sompylasar-website-vr {
+        opacity: 0.0;
+        transition-property: opacity;
+        transition-duration: 0.3s;
+        transition-timing-function: linear;
+        will-change: opacity;
+      }
+
       .a-body .sompylasar-website-static {
-        display: none;
+        opacity: 0;
+        transform: scale(5.0);
       }
       .a-body .sompylasar-website-vr {
         position: absolute;
         left: 0;
         top: 0;
+        right: 0;
+        bottom: 0;
         width: 100vw;
         height: 100vh;
         z-index: 1;
+        opacity: 1.0;
       }
     </style>
     <script>
@@ -372,7 +392,7 @@
             <br>Also:
             compilers and data transformations,
             <a class="sompylasar-website-link" href="https://github.com/sompylasar/zmey-gorynych" target="_blank" rel="nofollow noopener noreferrer">developer tools</a> and utilities,
-            APIs, UX, VR.
+            APIs, UX, <a class="sompylasar-website-link" href="#vr">VR</a>.
           </div>
           <div class="sompylasar-website-intro__contacts-and-cv-container">
             <div class="sompylasar-website-intro__contacts-container">
@@ -436,7 +456,7 @@
         </div>
       </div>
     </div>
-    <div class="sompylasar-website-vr" id="sompylasar-website-vr" style="display: none;"></div>
+    <div class="sompylasar-website-vr" id="sompylasar-website-vr"></div>
     <noscript>
       <div style="position: absolute; top: -9999px; left: -9999px;">
         <img src="https://www.google-analytics.com/collect?v=1&tid=UA-89593101-1&cid=&t=pageview&ds=web&z=3.14159" />
