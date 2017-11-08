@@ -1,10 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import SompylasarWebsiteVR from './SompylasarWebsiteVR';
+import SompylasarWebsiteVRRoot from './SompylasarWebsiteVRRoot';
 
+
+const isDebug = (!!window.location.port && parseInt(window.location.port, 10) !== 80);
 
 const rootEl = document.getElementById('sompylasar-website-vr');
 if (rootEl) {
-  ReactDOM.render(<SompylasarWebsiteVR />, rootEl);
+  ReactDOM.render(<SompylasarWebsiteVRRoot isDebug={isDebug} />, rootEl);
 }

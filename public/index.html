@@ -142,6 +142,9 @@
         transition-timing-function: linear;
         user-select: none;
       }
+      .sompylasar-website-avatar__vr.sompylasar-website-avatar__vr--available {
+        cursor: pointer;
+      }
       .sompylasar-website-avatar__vr.sompylasar-website-avatar__vr--visible {
         opacity: 1.0;
       }
@@ -314,27 +317,6 @@
       }
 
       .sompylasar-website-vr {
-        opacity: 0.0;
-        transition-property: opacity;
-        transition-duration: 0.3s;
-        transition-timing-function: linear;
-        will-change: opacity;
-      }
-
-      .a-body .sompylasar-website-static {
-        opacity: 0;
-        transform: scale(5.0);
-      }
-      .a-body .sompylasar-website-vr {
-        position: absolute;
-        left: 0;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 1;
-        opacity: 1.0;
       }
     </style>
     <script>

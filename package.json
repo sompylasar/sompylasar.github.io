@@ -13,28 +13,25 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
+    "test": "react-scripts test --env=jsdom --coverage",
+    "test-start": "react-scripts test --env=jsdom",
     "deploy": "yarn run build && node ./scripts/deploy.js"
   },
   "devDependencies": {
     "cross-env": "5.1.0",
-    "custom-react-scripts": "0.2.1",
     "execa": "0.8.0",
     "listr": "0.13.0",
+    "react-scripts": "1.0.17",
     "rimraf": "2.6.2"
   },
   "dependencies": {
-    "aframe": "0.7.1",
-    "aframe-environment-component": "1.0.0",
-    "aframe-extras": "3.12.4",
-    "aframe-react": "4.3.0",
     "debug": "3.1.0",
     "fpsmeter": "0.3.1",
     "prop-types": "15.6.0",
     "react": "16.0.0",
     "react-dom": "16.0.0",
     "react-motion": "0.5.2",
-    "three": "0.87.1"
+    "three": "0.87.1",
+    "webvr-ui": "0.10.0"
   }
 }
