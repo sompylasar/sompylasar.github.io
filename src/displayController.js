@@ -15,6 +15,7 @@ export function createDisplayController() {
   let _timer = 0;
 
   function frame(nowTimestamp) {
+    if (!_display) { return; }
     if (_fpsmeter) { _fpsmeter.tickStart(); }
     _dt = _dt + Math.min(1000, (nowTimestamp - (_lastTimestamp || nowTimestamp)));
     while (_dt > _slowStep) {
@@ -40,8 +41,8 @@ export function createDisplayController() {
   }
 
   return {
-    setUpdate: (update) => { _update = update; },
-    setRender: (render) => { _render = render; },
+    setUpdate: (update) => { _update = update || noop; },
+    setRender: (render) => { _render = render || noop; },
     setFps: (fps) => { _step = 1000 / fps; _slowStep = _slowFactor * _step; },
     setSlow: (slowFactor) => { _slowFactor = slowFactor; },
     setDisplay: (display) => {

@@ -1,7 +1,7 @@
 import React from 'react';
 
-import SessionStateSaver from './SessionStateSaver';
-import VRStateManager from './VRStateManager';
+import StatePersister from './StatePersister';
+import VRCanvas from './VRCanvas';
 import ReactChildren from './ReactChildren';
 
 import SompylasarWebsiteVRAvatarToggle from './SompylasarWebsiteVRAvatarToggle';
@@ -9,35 +9,36 @@ import SompylasarWebsiteVRScene from './SompylasarWebsiteVRScene';
 
 
 const SompylasarWebsiteVRRoot = ({ isDebug }) => (
-  <SessionStateSaver
+  <StatePersister
     storageKey={'SompylasarWebsiteVRRoot.state'}
     render={({ saveState, restoreState, resetState }) => (
-      <VRStateManager
+      <VRCanvas
+        isDebug={isDebug}
+        autoPresent={isDebug}
+        forceMono={isDebug}
         render={({
-          isReadyToPresentVR,
-          isPresentingVR,
-          display,
-          requestPresentVR,
-          requestExitVR,
+          isReadyToPresent,
+          isPresenting,
+          requestPresent,
+          requestExitPresent,
+          setUpdate,
         }) => (
           <ReactChildren>
             <SompylasarWebsiteVRAvatarToggle
-              isReadyToPresentVR={isReadyToPresentVR}
-              isPresentingVR={isPresentingVR}
-              onEnterVRRequested={requestPresentVR}
-              onExitVRRequested={requestExitVR}
+              isReadyToPresent={isReadyToPresent}
+              isPresenting={isPresenting}
+              requestPresent={requestPresent}
+              requestExitPresent={requestExitPresent}
             />
-            {isPresentingVR && (
+            {isPresenting && (
               <SompylasarWebsiteVRScene
-                isDebug={isDebug}
-                display={display}
-                saveState={saveState}
-                restoreState={restoreState}
+                saveSceneState={saveState}
+                restoreSceneState={restoreState}
+                setUpdate={setUpdate}
               />
             )}
           </ReactChildren>
         )}
-        resetState={resetState}
       />
     )}
   />
