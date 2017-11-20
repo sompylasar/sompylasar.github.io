@@ -14,14 +14,22 @@ const SompylasarWebsiteVRRoot = ({ isDebug }) => (
     render={({ saveState, restoreState, resetState }) => (
       <VRCanvas
         isDebug={isDebug}
+        isMono={isDebug}
         autoPresent={isDebug}
-        forceMono={isDebug}
         render={({
           isReadyToPresent,
           isPresenting,
           requestPresent,
           requestExitPresent,
           setUpdate,
+          setPostProcessing,
+          setDebug,
+          setMono,
+          setSlow,
+          isDebug,
+          isMono,
+          rendererSize,
+          slowFactor,
         }) => (
           <ReactChildren>
             <SompylasarWebsiteVRAvatarToggle
@@ -35,6 +43,14 @@ const SompylasarWebsiteVRRoot = ({ isDebug }) => (
                 saveSceneState={saveState}
                 restoreSceneState={restoreState}
                 setUpdate={setUpdate}
+                setPostProcessing={setPostProcessing}
+                setDebug={setDebug}
+                setMono={setMono}
+                setSlow={setSlow}
+                isDebug={isDebug}
+                isMono={isMono}
+                rendererSize={rendererSize}
+                slowFactor={slowFactor}
               />
             )}
           </ReactChildren>

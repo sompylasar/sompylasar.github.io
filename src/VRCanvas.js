@@ -11,9 +11,7 @@ import {
   PerspectiveCamera,
 } from 'three';
 
-import {
-  StereoEffect,
-} from './StereoEffect';
+import { StereoRendererWithEffectsComposer } from './three/StereoRendererWithEffectsComposer';
 
 import preventDefaultForEvent from './preventDefaultForEvent';
 import { createDisplayController } from './DisplayController';
@@ -73,19 +71,25 @@ class VRCanvas extends Component {
 
     this._scene = null;
 
-    if (this.props.isDebug) {
-      window.THREE = require('three');
-    }
-
-    this._glRenderer = new WebGLRenderer({ antialias: true });
+    this._glRenderer = new WebGLRenderer({
+      antialias: false,
+      alpha: false,
+    });
+    this._glRenderer.autoClear = false;
     this._glRenderer.setPixelRatio(window.devicePixelRatio);
 
-    this._camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 100 );
+    this._camera = new PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.01, 100 );
     this._camera.name = 'vrCanvasCamera';
 
-    this._stereoRenderer = new StereoEffect(this._glRenderer);
+    this._stereoRenderer = new StereoRendererWithEffectsComposer( this._glRenderer );
 
-    this.state = this._getState();
+    this._postProcessingPasses = [];
+
+    this.state = this._getState({
+      isDebug: !!this.props.isDebug,
+      isMono: !!this.props.isMono,
+      slowFactor: 1.0,
+    });
 
     this._displayController.setRender(this._onRender);
 
@@ -93,18 +97,34 @@ class VRCanvas extends Component {
   }
 
   componentDidMount() {
-    this._setupFpsMeter(this.props.isDebug);
+    this.componentDidUpdate({}, {});
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (prevProps.isDebug !== this.props.isDebug || prevState.isPresenting !== this.state.isPresenting) {
-      this._setupFpsMeter(this.props.isDebug);
+    if (prevState.isDebug !== this.state.isDebug) {
+      if (this.state.isDebug) {
+        window.THREE = require('three');
+        window.scene = this._scene;
+      }
+      else {
+        delete window.THREE;
+        delete window.scene;
+      }
+    }
+    if (prevState.isDebug !== this.state.isDebug || prevState.isPresenting !== this.state.isPresenting) {
+      this._setupFpsMeter(this.state.isDebug);
     }
     if (prevState.presentingDisplay !== this.state.presentingDisplay) {
       this._displayController.setDisplay(this.state.presentingDisplay);
     }
+    if (prevState.slowFactor !== this.state.slowFactor) {
+      this._displayController.setSlow(this.state.slowFactor);
+    }
     if (prevState.isPresenting !== this.state.isPresenting && this.state.isPresenting) {
       this._onContainerResize();
+    }
+    if (prevState.isMono !== this.state.isMono) {
+      this._stereoRenderer.setMono(this.state.isMono);
     }
     if (
       this.props.autoPresent &&
@@ -130,6 +150,7 @@ class VRCanvas extends Component {
 
   _onContainerRef = (containerEl) => {
     if (containerEl) {
+      document.body.style.overflow = 'hidden';
       this._containerEl = containerEl;
       containerEl.appendChild(this._glRenderer.domElement);
       this._onContainerResize();
@@ -137,6 +158,7 @@ class VRCanvas extends Component {
     else if (this._containerEl) {
       this._containerEl.removeChild(this._glRenderer.domElement);
       this._containerEl = null;
+      document.body.style.overflow = '';
     }
   }
 
@@ -146,11 +168,16 @@ class VRCanvas extends Component {
       const width = (rect.right - rect.left);
       const height = (rect.bottom - rect.top);
 
-      this._camera.aspect = width / height;
-      this._camera.updateProjectionMatrix();
+      const rendererSize = this._glRenderer.getSize();
+      if (width > 0 && height > 0 && (rendererSize.width !== width || rendererSize.height !== height)) {
+        this._camera.aspect = width / height;
+        this._camera.updateProjectionMatrix();
 
-      this._glRenderer.setSize(width, height);
-      this._stereoRenderer.setSize(width, height);
+        this._glRenderer.setSize(width, height);
+        this._stereoRenderer.setSize(width, height);
+
+        this.setState({ rendererSize: rendererSize });
+      }
     }
   }
 
@@ -189,8 +216,10 @@ class VRCanvas extends Component {
       });
   }
 
-  _getState() {
+  _getState(initialState) {
     return {
+      isDebug: (initialState ? initialState.isDebug : this.state.isDebug),
+      isMono: (initialState ? initialState.isMono : this.state.isMono),
       isReadyToPresent: (
         this._webvrManagerState === WebVRManagerState.READY_TO_PRESENT ||
         this._webvrManagerState === WebVRManagerState.ERROR_NO_PRESENTABLE_DISPLAYS
@@ -207,6 +236,8 @@ class VRCanvas extends Component {
             : null
           )
       ),
+      rendererSize: this._glRenderer.getSize(),
+      slowFactor: (initialState ? initialState.slowFactor : this.state.slowFactor),
     };
   }
 
@@ -228,12 +259,7 @@ class VRCanvas extends Component {
     if (!presentingDisplay) { return; }
 
     if (this._scene) {
-      if (this.props.forceMono) {
-        this._glRenderer.render(this._scene, this._camera);
-      }
-      else {
-        this._stereoRenderer.render(this._scene, this._camera);
-      }
+      this._stereoRenderer.render(this._scene, this._camera);
     }
 
     if (presentingDisplay.submitFrame) {
@@ -251,8 +277,10 @@ class VRCanvas extends Component {
 
         this._scene = updateScene(timeStep, this._camera);
 
-        if (this.props.isDebug && window.scene !== this._scene) {
-          window.scene = this._scene;
+        if (this.state.isDebug) {
+          if (window.scene !== this._scene) {
+            window.scene = this._scene;
+          }
         }
       });
     }
@@ -261,10 +289,30 @@ class VRCanvas extends Component {
     }
   }
 
+  _setPostProcessing = (postProcessingPasses) => {
+    this._stereoRenderer.setPostProcessing(postProcessingPasses);
+  }
+
+  _setDebug = (isDebug) => {
+    this.setState({ isDebug: !!isDebug });
+  }
+
+  _setMono = (isMono) => {
+    this.setState({ isMono: !!isMono });
+  }
+
+  _setSlow = (slowFactor) => {
+    this.setState({ slowFactor: slowFactor });
+  }
+
   render() {
     const {
       isReadyToPresent,
       isPresenting,
+      isDebug,
+      isMono,
+      rendererSize,
+      slowFactor,
     } = this.state;
 
     return (
@@ -291,6 +339,14 @@ class VRCanvas extends Component {
           requestPresent: this._requestPresent,
           requestExitPresent: this._requestExitPresent,
           setUpdate: this._setUpdate,
+          setPostProcessing: this._setPostProcessing,
+          setDebug: this._setDebug,
+          setMono: this._setMono,
+          setSlow: this._setSlow,
+          isDebug: isDebug,
+          isMono: isMono,
+          rendererSize: rendererSize,
+          slowFactor: slowFactor,
         })}
       </div>
     );

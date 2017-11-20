@@ -18,11 +18,13 @@ export function createDisplayController() {
     if (!_display) { return; }
     if (_fpsmeter) { _fpsmeter.tickStart(); }
     _dt = _dt + Math.min(1000, (nowTimestamp - (_lastTimestamp || nowTimestamp)));
-    while (_dt > _slowStep) {
-      _dt = _dt - _slowStep;
-      _update(_step);
+    if (_slowFactor > 0) {
+      while (_dt > _slowStep) {
+        _dt = _dt - _slowStep;
+        _update(_step);
+      }
+      _render(_dt / _slowFactor);
     }
-    _render(_dt / _slowFactor);
     _lastTimestamp = nowTimestamp;
     if (_fpsmeter) { _fpsmeter.tick(); }
     _timer = _display.requestAnimationFrame(frame);
@@ -44,7 +46,7 @@ export function createDisplayController() {
     setUpdate: (update) => { _update = update || noop; },
     setRender: (render) => { _render = render || noop; },
     setFps: (fps) => { _step = 1000 / fps; _slowStep = _slowFactor * _step; },
-    setSlow: (slowFactor) => { _slowFactor = slowFactor; },
+    setSlow: (slowFactor) => { _slowFactor = slowFactor; _slowStep = _slowFactor * _step; },
     setDisplay: (display) => {
       if (display === _display) { return; }
       stop();

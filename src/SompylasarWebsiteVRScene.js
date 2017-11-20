@@ -1,22 +1,26 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
+
+import * as dg from 'dis-gui';
 
 import {
   Scene,
   Group,
   Object3D,
+  Vector2,
   Vector3,
   Euler,
-  Matrix4,
   BoxGeometry,
   CylinderGeometry,
+  SphereGeometry,
   MeshBasicMaterial,
-  ShaderMaterial,
   Color,
   Mesh,
-  FrontSide,
-  BackSide,
-  AdditiveBlending,
 } from 'three';
+
+import { ShaderPass } from './three/ShaderPass';
+import { BloomPass } from './three/BloomPass';
+import { FXAAShader } from './three/FXAAShader';
+import { CopyShader } from './three/CopyShader';
 
 import GLSL from 'glslify';
 
@@ -65,97 +69,94 @@ class LaserRay extends Object3D {
   constructor() {
     super();
 
-    const baseMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+    const baseMaterial = new MeshBasicMaterial({
+      color: new Color(0x00ff00),
+    });
+    this._baseMaterial = baseMaterial;
 
-    const radius = 0.005;
-    const baseLength = 0.5;
+    const rayRadius = 0.01;
+    const rayGeometryLength = 1.0;
+
+    this._raySpeed = 0.5;
+    this._rayLength = 0.8;
+
+    this._rayGeometryLength = rayGeometryLength;
 
     // CylinderGeometry(bottomRadius, topRadius, height, segmentsRadius, segmentsHeight, openEnded )
-    const rayGeometry = new CylinderGeometry(radius * 0.7, radius, baseLength, 10, 1, false);
+    const rayGeometry = new CylinderGeometry(rayRadius * 0.7, rayRadius, rayGeometryLength, 10, 1, false);
     // Translate the cylinder geometry so that the desired point within the geometry is now at the origin.
     // https://stackoverflow.com/a/12835749/1346510
-    rayGeometry.translate(0, baseLength / 2, 0);
+    rayGeometry.translate(0, rayGeometryLength / 2, 0);
+    this._rayGeometry = rayGeometry;
 
     const rayMesh = new Mesh(rayGeometry, baseMaterial);
     rayMesh.name = 'rayMesh';
+    rayMesh.scale.z = 0.8;
+    this._rayMesh = rayMesh;
 
-    this._cameraWorldPosition = new Vector3();
-    this._glowWorldPosition = new Vector3();
-    this._viewVector = new Vector3();
-
-    const glowMaterial = new ShaderMaterial({
-      uniforms: {
-        c: { type: 'f', value: 1.0 },
-        p: { type: 'f', value: 1.0 },
-        glowColor: { type: 'c', value: new Color(0x00ff99) },
-        viewVector: { type: 'v3', value: this._viewVector },
-      },
-      vertexShader: (
-        `
-          uniform vec3 viewVector;
-          uniform float c;
-          uniform float p;
-          varying float intensity;
-          void main()
-          {
-            vec3 vNormal = normalize( normalMatrix * normal );
-        	  vec3 vNormel = normalize( normalMatrix * viewVector );
-        	  intensity = pow( c - dot(vNormal, vNormel), p );
-
-            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-          }
-        `
-      ),
-      fragmentShader: (
-        `
-          uniform vec3 glowColor;
-          varying float intensity;
-          void main()
-          {
-          	vec3 glow = glowColor * intensity;
-            gl_FragColor = vec4( glow, 1.0 );
-          }
-        `
-      ),
-      side: FrontSide,
-      blending: AdditiveBlending,
-      transparent: true,
-    });
-    glowMaterial.name = 'glowMaterial';
-    this._glowMaterial = glowMaterial;
-
-    const glowDebugMaterial = new MeshBasicMaterial({ color: glowMaterial.uniforms.glowColor.value });
-    const glowMesh = new Mesh(rayGeometry, glowMaterial);
-    glowMesh.name = 'glowMesh';
-    glowMesh.scale.x = 3.25;
-    glowMesh.scale.y = 1.0;
-    glowMesh.scale.z = 3.25;
-    this._glowMesh = glowMesh;
+    const rayEndGeometry = new SphereGeometry(rayRadius * 1.5);
+    const rayEndMesh = new Mesh(rayEndGeometry, baseMaterial);
+    rayEndMesh.name = 'rayEndMesh';
+    rayEndMesh.visible = false;
+    this._rayEndMesh = rayEndMesh;
 
     this._rayGroup = new Group();
     this._rayGroup.name = 'rayGroup';
-    //this._rayGroup.add(rayMesh);
-    this._rayGroup.add(glowMesh);
+    this._rayGroup.position.y = 0;
+    this._rayGroup.scale.y = 0.01;
+    this._rayGroup.add(rayMesh);
 
     this.add(this._rayGroup);
+    this.add(this._rayEndMesh);
+
+    this._nearPosition = -this._rayLength;
+    this._farPosition = 0.01;
   }
 
-  setRayLength(lengthRatio) {
-    this._rayGroup.scale.y = lengthRatio;
+  getBaseColor() {
+    return this._baseMaterial.color;
   }
 
-  updateRayGlow(camera) {
-    // TODO(@sompylasar): This `updateMatrixWorld` should happen automatically.
-    camera.traverseAncestors((obj) => { obj.updateMatrixWorld(true); });
-    this._glowMesh.traverseAncestors((obj) => { obj.updateMatrixWorld(true); });
+  updateTravel(timeStep, hitDistance) {
+    const speed = this._raySpeed / timeStep;
 
-    this._cameraWorldPosition.setFromMatrixPosition(camera.matrixWorld);
-    this._glowWorldPosition.setFromMatrixPosition(this._glowMesh.matrixWorld);
+    this._nearPosition += speed;
+    this._farPosition += speed;
 
-    this._viewVector.subVectors(this._cameraWorldPosition, this._glowWorldPosition);
-    //this._viewVector.set(0,-1,0);
+    const nearPosition = Math.max(0, this._nearPosition);
+    const farPosition = Math.min(hitDistance, this._farPosition);
+
+    this._rayEndMesh.position.y = hitDistance;
+
+    const r = (Math.random() * 1.5) + 1.0;
+    this._rayEndMesh.scale.x = r;
+    this._rayEndMesh.scale.y = 0.2;
+    this._rayEndMesh.scale.z = r;
+
+    this._rayGroup.position.y = nearPosition;
+    this._rayGroup.scale.y = ((farPosition - nearPosition) / this._rayGeometryLength);
+
+    this._rayEndMesh.visible = (this._farPosition >= hitDistance);
+
+    if (this._nearPosition >= hitDistance) {
+      return true;
+    }
   }
 }
+
+
+const _colorConverter = new Color();
+const GUIColorThreeHex = ({ colorHex, onChange, onFinishChange, ...props }) => {
+  _colorConverter.setHex(colorHex);
+  return (
+    <dg.Color
+      {...props}
+      red={_colorConverter.r * 255} green={_colorConverter.g * 255} blue={_colorConverter.b * 255}
+      onChange={onChange ? (c) => { onChange(_colorConverter.setRGB(c.red / 255, c.green / 255, c.blue / 255).getHex()); } : undefined}
+      onFinishChange={onFinishChange ? (c) => { onFinishChange(_colorConverter.setRGB(c.red / 255, c.green / 255, c.blue / 255).getHex()); } : undefined}
+    />
+  );
+};
 
 
 class SompylasarWebsiteVRScene extends Component {
@@ -176,14 +177,34 @@ class SompylasarWebsiteVRScene extends Component {
 
     this._cameraDolly = null;
 
-    //this._scene.add(makeDebugMarker(0xffffff, new Vector3(0, 0, 0), 'zeroMarker', this._markers));
+    this._raySourcePosition = new Vector3(0, 0, 0);
+    this._raySourceRotation = new Euler(0, 0, 0, 'XYZ');
+    this._scene.add(makeDebugMarker(0xffffff, this._raySourcePosition, 'raySourcePosition', this._markers));
 
-    this._ray = new LaserRay();
-    this._ray.name = 'ray';
-    //this._ray.add(makeDebugMarker(0xff0000, new Vector3(0, 0, 0), 'rayPositionMarker', this._markers));
-    this._scene.add(this._ray);
+    this._rays = [];
 
     this.props.setUpdate(this._updateScene);
+
+    this._effectCopy = new ShaderPass(CopyShader);
+    this._effectBloom = new BloomPass(3.0);
+    this._effectFXAA = new ShaderPass(FXAAShader);
+    this._effectFXAA.uniforms.resolution.value = new Vector2(1 / this.props.rendererSize.width, 1 / this.props.rendererSize.height);
+
+    this.props.setPostProcessing([
+      this._effectBloom,
+      this._effectFXAA,
+      this._effectCopy,
+    ]);
+
+    this.state = {
+      rayBaseColor: 0x00ff00,
+      bloomStrength: this._effectBloom.copyUniforms[ "opacity" ].value,
+    };
+  }
+
+  componentDidUpdate() {
+    this._effectBloom.copyUniforms[ "opacity" ].value = this.state.bloomStrength;
+    this._effectFXAA.uniforms.resolution.value = new Vector2(1 / this.props.rendererSize.width, 1 / this.props.rendererSize.height);
   }
 
   componentWillUnmount() {
@@ -200,7 +221,8 @@ class SompylasarWebsiteVRScene extends Component {
       this._cameraDolly = new Object3D();
       this._cameraDolly.name = 'cameraDolly';
       this._cameraDolly.add(camera);
-      this._cameraDolly.position.z = 0.2;
+      //this._cameraDolly.position.z = 0.2;
+      this._cameraDolly.position.z = 1;
       this._scene.add(this._cameraDolly);
     }
 
@@ -208,33 +230,51 @@ class SompylasarWebsiteVRScene extends Component {
       marker.update(timeStep, time);
     });
 
-    this._ray.position.copy(new Vector3(0, 0, 0));
-
-    /*
-    this._ray.rotation.copy(new Euler(
-      -0.45 * Math.PI * Math.sin(time / 1000),
+    this._raySourceRotation.copy(new Euler(
+      -0.40 * Math.PI,// * Math.sin(time / 1000),
       0,
       -0.45 * Math.PI * Math.sin(time / 1000),
       'XYZ'
     ));
-    */
 
-    this._ray.rotation.copy(new Euler(
-      -0.55 * Math.PI,
-      0,
-      0.15 * Math.PI,//Math.sin(time / 1000) * 0.15 * Math.PI,
-      //0.15 * Math.PI,
-      'XYZ'
-    ));
+    if (!this._sceneState.nextRayTime || time >= this._sceneState.nextRayTime) {
+      this._sceneState.nextRayTime = time + 300;
 
-    //this._ray.setRayLength(Math.sin(time / 1000));
-
-    this._ray.updateRayGlow(camera);
+      const ray = new LaserRay();
+      ray.getBaseColor().setHex(this.state.rayBaseColor);
+      ray.position.copy(this._raySourcePosition);
+      ray.rotation.copy(this._raySourceRotation);
+      this._scene.add(ray);
+      this._rays.push(ray);
+    }
+    else {
+      for (let ic = this._rays.length, i = 0; i < ic; ++i) {
+        const ray = this._rays[i];
+        if (ray.updateTravel(timeStep, 2.0)) {
+          this._scene.remove(ray);
+          this._rays.splice(i, 1);
+          --ic;
+          --i;
+        }
+      }
+    }
 
     return this._scene;
   }
 
   render() {
+    if (this.props.isDebug) {
+      return (
+        <dg.GUI>
+          <GUIColorThreeHex label='rayBaseColor' colorHex={this.state.rayBaseColor} onChange={(colorHex) => { this.setState({ rayBaseColor: colorHex }); }} />
+          <dg.Number label='bloomStrength' min={0.0} max={10.0} value={this.state.bloomStrength} onChange={(value) => { this.setState({ bloomStrength: value }); }} />
+          <dg.Number label='slowFactor' min={0.01} max={30.0} value={this.props.slowFactor} onChange={(value) => { this.props.setSlow(value); }} />
+          <dg.Checkbox label='isDebug' checked={this.props.isDebug} onChange={(isDebug) => { this.props.setDebug(isDebug); }} />
+          <dg.Checkbox label='isMono' checked={this.props.isMono} onChange={(isMono) => { this.props.setMono(isMono); }} />
+        </dg.GUI>
+      );
+    }
+
     return null;
   }
 }
