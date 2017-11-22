@@ -15,12 +15,16 @@ import {
   MeshBasicMaterial,
   Color,
   Mesh,
+  GridHelper,
 } from 'three';
+
+import { createJoyMap, createQueryModule } from 'joymap';
 
 import { ShaderPass } from './three/ShaderPass';
 import { BloomPass } from './three/BloomPass';
 import { FXAAShader } from './three/FXAAShader';
 import { CopyShader } from './three/CopyShader';
+import { GamepadFlyControls } from './three/GamepadFlyControls';
 
 import GLSL from 'glslify';
 
@@ -69,29 +73,33 @@ class LaserRay extends Object3D {
   constructor() {
     super();
 
-    const baseMaterial = new MeshBasicMaterial({
-      color: new Color(0x00ff00),
-    });
-    this._baseMaterial = baseMaterial;
-
     const rayRadius = 0.01;
     const rayGeometryLength = 1.0;
 
     this._raySpeed = 0.5;
     this._rayLength = 0.8;
-
     this._rayGeometryLength = rayGeometryLength;
+    this._nearPosition = -this._rayLength;
+    this._farPosition = 0.01;
+    this._hitDistance = Number.POSITIVE_INFINITY;
+    this._finished = false;
+
+    const baseMaterial = new MeshBasicMaterial({
+      color: new Color(0x00ff00),
+    });
+    this._baseMaterial = baseMaterial;
 
     // CylinderGeometry(bottomRadius, topRadius, height, segmentsRadius, segmentsHeight, openEnded )
     const rayGeometry = new CylinderGeometry(rayRadius * 0.7, rayRadius, rayGeometryLength, 10, 1, false);
     // Translate the cylinder geometry so that the desired point within the geometry is now at the origin.
     // https://stackoverflow.com/a/12835749/1346510
     rayGeometry.translate(0, rayGeometryLength / 2, 0);
+    rayGeometry.rotateX(-0.5 * Math.PI);
     this._rayGeometry = rayGeometry;
 
     const rayMesh = new Mesh(rayGeometry, baseMaterial);
     rayMesh.name = 'rayMesh';
-    rayMesh.scale.z = 0.8;
+    rayMesh.scale.y = 0.8;
     this._rayMesh = rayMesh;
 
     const rayEndGeometry = new SphereGeometry(rayRadius * 1.5);
@@ -102,45 +110,48 @@ class LaserRay extends Object3D {
 
     this._rayGroup = new Group();
     this._rayGroup.name = 'rayGroup';
-    this._rayGroup.position.y = 0;
-    this._rayGroup.scale.y = 0.01;
+    this._rayGroup.scale.z = 0.01;
     this._rayGroup.add(rayMesh);
 
     this.add(this._rayGroup);
     this.add(this._rayEndMesh);
-
-    this._nearPosition = -this._rayLength;
-    this._farPosition = 0.01;
   }
 
-  getBaseColor() {
-    return this._baseMaterial.color;
+  setColorHex(colorHex) {
+    this._baseMaterial.color.setHex(colorHex);
   }
 
-  updateTravel(timeStep, hitDistance) {
+  setHitDistance(hitDistance) {
+    this._hitDistance = hitDistance;
+  }
+
+  update(timeStep) {
+    if (this._finished) { return; }
+
     const speed = this._raySpeed / timeStep;
 
     this._nearPosition += speed;
     this._farPosition += speed;
 
     const nearPosition = Math.max(0, this._nearPosition);
-    const farPosition = Math.min(hitDistance, this._farPosition);
-
-    this._rayEndMesh.position.y = hitDistance;
+    const farPosition = Math.min(this._hitDistance, this._farPosition);
 
     const r = (Math.random() * 1.5) + 1.0;
     this._rayEndMesh.scale.x = r;
-    this._rayEndMesh.scale.y = 0.2;
-    this._rayEndMesh.scale.z = r;
+    this._rayEndMesh.scale.y = r;
+    this._rayEndMesh.scale.z = 0.2;
 
-    this._rayGroup.position.y = nearPosition;
-    this._rayGroup.scale.y = ((farPosition - nearPosition) / this._rayGeometryLength);
+    this._rayGroup.position.z = -nearPosition;
+    this._rayGroup.scale.z = ((farPosition - nearPosition) / this._rayGeometryLength);
 
-    this._rayEndMesh.visible = (this._farPosition >= hitDistance);
-
-    if (this._nearPosition >= hitDistance) {
-      return true;
+    const hit = (this._farPosition >= this._hitDistance);
+    if (hit) {
+      this._rayEndMesh.position.z = -this._hitDistance;
     }
+    this._rayEndMesh.visible = hit;
+
+    this._finished = (this._nearPosition >= this._hitDistance);
+    this.visible = !this._finished;
   }
 }
 
@@ -170,6 +181,17 @@ class SompylasarWebsiteVRScene extends Component {
     // "Saving" a reference of the mutable state object once is enough for StatePersister.
     this.props.saveSceneState(this._sceneState);
 
+    this._joymap = createJoyMap({
+      autoConnect: true,
+    });
+    this._joymapQuery = createQueryModule();
+    this._joymap.addModule(this._joymapQuery);
+
+    this._gamepadFlyControlsObject = new Object3D();
+    this._gamepadFlyControls = new GamepadFlyControls(this._gamepadFlyControlsObject);
+    this._gamepadFlyControls.movementSpeed = 1.0;
+    this._gamepadFlyControls.rollSpeed = 0.0001;
+
     this._markers = [];
 
     this._scene = new Scene();
@@ -177,7 +199,12 @@ class SompylasarWebsiteVRScene extends Component {
 
     this._cameraDolly = null;
 
-    this._raySourcePosition = new Vector3(0, 0, 0);
+    const gridCellSize = 0.5;
+    const gridCells = 20;
+    this._grid = new GridHelper(gridCells * gridCellSize, gridCells, 0xffffff, 0xffffff);
+    this._scene.add(this._grid);
+
+    this._raySourcePosition = new Vector3(0, 0.3, 0);
     this._raySourceRotation = new Euler(0, 0, 0, 'XYZ');
     this._scene.add(makeDebugMarker(0xffffff, this._raySourcePosition, 'raySourcePosition', this._markers));
 
@@ -222,35 +249,88 @@ class SompylasarWebsiteVRScene extends Component {
       this._cameraDolly.name = 'cameraDolly';
       this._cameraDolly.add(camera);
       //this._cameraDolly.position.z = 0.2;
-      this._cameraDolly.position.z = 1;
+      this._cameraDolly.position.y = 0.5;
+      this._cameraDolly.position.z = 5;
+      this._gamepadFlyControlsObject.position.copy(this._cameraDolly.position);
       this._scene.add(this._cameraDolly);
+
+      /*
+      const geom = new CylinderGeometry(
+        0.1, 0.1, 2.0, 10, 2, false
+      );
+      geom.translate(0, 2.0 / 2, 0);
+      geom.rotateX(-0.5 * Math.PI);
+      this._flyingObject = new Mesh(geom, new MeshBasicMaterial({ color: 0xff0000 }));
+      this._flyingObject.scale.x = 1.5;
+      this._flyingObject.scale.y = 0.5;
+      this._flyingObject.scale.z = 0.5;
+      this._flyingObject.position.set(0,0,0);
+      this._scene.add(this._flyingObject);
+      */
+
+      this._flyingObject = this._cameraDolly;
     }
+
+    this._joymap.poll();
+    const leftStick = this._joymapQuery.getSticks('L');
+    const rightStick = this._joymapQuery.getSticks('R');
+    const leftFlap = this._joymapQuery.getButtons('L2');
+    const rightFlap = this._joymapQuery.getButtons('R2');
+
+    if (rightStick) {
+      const accel = (rightFlap ? rightFlap.value : 0);
+      const decel = (leftFlap ? leftFlap.value : 0);
+      this._gamepadFlyControls.moveVector.set(0, 0, -(0.0002 * (1.0 + 2.5 * accel - 2.5 * decel)));
+      const leftStickPitch = leftStick.value[1];
+      const rightStickPitch = rightStick.value[1];
+      this._gamepadFlyControls.setGamepadValues(
+        rightStick.value[0],
+        -((leftStickPitch * 0.3 + (rightStickPitch * leftStickPitch <= 0 ? 0 : rightStickPitch * 0.2)) * (1.0 + 4.5 * accel)),
+        leftStick.value[0] * 0.8 * (1.0 + 2.5 * accel)
+      );
+      this._gamepadFlyControls.update(timeStep);
+      this._flyingObject.position.copy(this._gamepadFlyControlsObject.position);
+      this._flyingObject.quaternion.copy(this._gamepadFlyControlsObject.quaternion);
+    }
+    this._flyingObject.position.x = Math.max(-5, Math.min(5, this._flyingObject.position.x));
+    this._flyingObject.position.y = Math.max(0.3, Math.min(5, this._flyingObject.position.y));
+    this._flyingObject.position.z = Math.max(-5, Math.min(5, this._flyingObject.position.z));
 
     this._markers.forEach((marker) => {
       marker.update(timeStep, time);
     });
 
+    /*
     this._raySourceRotation.copy(new Euler(
       -0.40 * Math.PI,// * Math.sin(time / 1000),
       0,
       -0.45 * Math.PI * Math.sin(time / 1000),
       'XYZ'
     ));
+    */
 
     if (!this._sceneState.nextRayTime || time >= this._sceneState.nextRayTime) {
       this._sceneState.nextRayTime = time + 300;
 
       const ray = new LaserRay();
-      ray.getBaseColor().setHex(this.state.rayBaseColor);
-      ray.position.copy(this._raySourcePosition);
-      ray.rotation.copy(this._raySourceRotation);
+      //for (let i = 20; i >= 0; --i) { ray.update(timeStep); }
+      ray.setColorHex(this.state.rayBaseColor);
+      ray.setHitDistance(2.0);
+      //ray.position.copy(this._raySourcePosition);
+      //ray.rotation.copy(this._raySourceRotation);
+      this._flyingObject.updateMatrixWorld();
+      const raySourceOffset = new Vector3(0, -0.13, 0);
+      const pos = this._flyingObject.localToWorld(this._flyingObject.worldToLocal(this._flyingObject.position.clone()).add(raySourceOffset));
+      ray.position.copy(pos);
+      ray.quaternion.copy(this._flyingObject.quaternion);
       this._scene.add(ray);
       this._rays.push(ray);
     }
     else {
       for (let ic = this._rays.length, i = 0; i < ic; ++i) {
         const ray = this._rays[i];
-        if (ray.updateTravel(timeStep, 2.0)) {
+        ray.update(timeStep);
+        if (!ray.visible) {
           this._scene.remove(ray);
           this._rays.splice(i, 1);
           --ic;
