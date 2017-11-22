@@ -204,10 +204,6 @@ class SompylasarWebsiteVRScene extends Component {
     this._grid = new GridHelper(gridCells * gridCellSize, gridCells, 0xffffff, 0xffffff);
     this._scene.add(this._grid);
 
-    this._raySourcePosition = new Vector3(0, 0.3, 0);
-    this._raySourceRotation = new Euler(0, 0, 0, 'XYZ');
-    this._scene.add(makeDebugMarker(0xffffff, this._raySourcePosition, 'raySourcePosition', this._markers));
-
     this._rays = [];
 
     this.props.setUpdate(this._updateScene);
@@ -248,7 +244,6 @@ class SompylasarWebsiteVRScene extends Component {
       this._cameraDolly = new Object3D();
       this._cameraDolly.name = 'cameraDolly';
       this._cameraDolly.add(camera);
-      //this._cameraDolly.position.z = 0.2;
       this._cameraDolly.position.y = 0.5;
       this._cameraDolly.position.z = 5;
       this._gamepadFlyControlsObject.position.copy(this._cameraDolly.position);
@@ -300,24 +295,12 @@ class SompylasarWebsiteVRScene extends Component {
       marker.update(timeStep, time);
     });
 
-    /*
-    this._raySourceRotation.copy(new Euler(
-      -0.40 * Math.PI,// * Math.sin(time / 1000),
-      0,
-      -0.45 * Math.PI * Math.sin(time / 1000),
-      'XYZ'
-    ));
-    */
-
     if (!this._sceneState.nextRayTime || time >= this._sceneState.nextRayTime) {
       this._sceneState.nextRayTime = time + 300;
 
       const ray = new LaserRay();
-      //for (let i = 20; i >= 0; --i) { ray.update(timeStep); }
       ray.setColorHex(this.state.rayBaseColor);
-      ray.setHitDistance(2.0);
-      //ray.position.copy(this._raySourcePosition);
-      //ray.rotation.copy(this._raySourceRotation);
+      ray.setHitDistance(10.0);
       this._flyingObject.updateMatrixWorld();
       const raySourceOffset = new Vector3(0, -0.13, 0);
       const pos = this._flyingObject.localToWorld(this._flyingObject.worldToLocal(this._flyingObject.position.clone()).add(raySourceOffset));
