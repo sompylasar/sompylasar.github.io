@@ -13,54 +13,42 @@ import {
 
 
 export const GamepadFlyControls = function (object) {
-    this.object = object;
+  // Internals
 
-    // API
+  this.object = object;
 
-    this.movementSpeed = 1.0;
-    this.rollSpeed = 0.005;
+  this.tmpMoveVector = new Vector3();
+  this.tmpQuaternion = new Quaternion();
 
-    // internals
+  this.rotationVector = new Vector3(0, 0, 0);
+  this.moveVector = new Vector3(0, 0, 0);
 
-    this.tmpQuaternion = new Quaternion();
+  this.yawSpeed = 0;
+  this.pitchSpeed = 0;
+  this.rollSpeed = 0;
+  this.moveSpeed = 0;
 
-    this.moveState = {up: 0, down: 0, left: 0, right: 0, forward: 0, back: 0, pitchUp: 0, pitchDown: 0, yawLeft: 0, yawRight: 0, rollLeft: 0, rollRight: 0};
-    this.moveVector = new Vector3(0, 0, 0);
-    this.rotationVector = new Vector3(0, 0, 0);
+  // API
 
-    this.gamepadYaw = 0;
-    this.gamepadPitch = 0;
-    this.gamepadRoll = 0;
+  this.setSpeeds = function (yawSpeed, pitchSpeed, rollSpeed, moveSpeed) {
+    this.yawSpeed = yawSpeed || 0;
+    this.pitchSpeed = pitchSpeed || 0;
+    this.rollSpeed = rollSpeed || 0;
+    this.moveSpeed = moveSpeed || 0;
+  };
 
-    this.setGamepadValues = function (gamepadYaw, gamepadPitch, gamepadRoll) {
-      this.gamepadYaw = gamepadYaw || 0;
-      this.gamepadPitch = gamepadPitch || 0;
-      this.gamepadRoll = gamepadRoll || 0;
-    };
+  this.update = function (timeStep) {
+    this.rotationVector.x = -this.pitchSpeed * timeStep;
+    this.rotationVector.y = -this.yawSpeed * timeStep;
+    this.rotationVector.z = -this.rollSpeed * timeStep;
 
-    this.update = function (delta) {
-        this.moveState.yawLeft   = -this.gamepadYaw;
-        this.moveState.pitchDown = this.gamepadPitch;
-        this.moveState.rollLeft = -this.gamepadRoll;
+    this.moveVector.z = -this.moveSpeed * timeStep;
 
-        this.updateRotationVector();
+    this.tmpQuaternion.set(this.rotationVector.x, this.rotationVector.y, this.rotationVector.z, 1).normalize();
+    this.object.quaternion.multiply(this.tmpQuaternion);
 
-        var moveMult = delta * this.movementSpeed;
-        var rotMult = delta * this.rollSpeed;
-
-        this.object.translateX(this.moveVector.x * moveMult);
-        this.object.translateY(this.moveVector.y * moveMult);
-        this.object.translateZ(this.moveVector.z * moveMult);
-
-        this.tmpQuaternion.set(this.rotationVector.x * rotMult, this.rotationVector.y * rotMult, this.rotationVector.z * rotMult, 1).normalize();
-        this.object.quaternion.multiply(this.tmpQuaternion);
-    };
-
-    this.updateRotationVector = function () {
-        this.rotationVector.x = ( -this.moveState.pitchDown + this.moveState.pitchUp );
-        this.rotationVector.y = ( -this.moveState.yawRight  + this.moveState.yawLeft );
-        this.rotationVector.z = ( -this.moveState.rollRight + this.moveState.rollLeft );
-    };
-
-    this.updateRotationVector();
+    this.tmpMoveVector.copy(this.moveVector);
+    this.tmpMoveVector.applyQuaternion(this.object.quaternion);
+    this.object.position.add(this.tmpMoveVector);
+  };
 };

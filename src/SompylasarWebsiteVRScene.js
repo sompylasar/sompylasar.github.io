@@ -8,17 +8,23 @@ import {
   Object3D,
   Vector2,
   Vector3,
-  Euler,
+  Color,
   BoxGeometry,
   CylinderGeometry,
   SphereGeometry,
+  PlaneGeometry,
   MeshBasicMaterial,
-  Color,
+  MeshLambertMaterial,
+  DoubleSide,
   Mesh,
-  GridHelper,
+  Raycaster,
+  HemisphereLight,
+  DirectionalLight,
+  Math as THREEMath,
 } from 'three';
 
 import { createJoyMap, createQueryModule } from 'joymap';
+import vkey from 'vkey';
 
 import { ShaderPass } from './three/ShaderPass';
 import { BloomPass } from './three/BloomPass';
@@ -37,8 +43,7 @@ class DebugMarker extends Object3D {
   constructor(color, position, name) {
     super();
 
-    const markerMaterial = new MeshBasicMaterial({ color: color });
-    markerMaterial.wireframe = true;
+    const markerMaterial = new MeshBasicMaterial({ color: color, wireframe: true });
 
     const markerMesh = new Mesh(markerGeometry, markerMaterial);
     markerMesh.name = name + 'Mesh';
@@ -80,12 +85,15 @@ class LaserRay extends Object3D {
     this._rayLength = 0.8;
     this._rayGeometryLength = rayGeometryLength;
     this._nearPosition = -this._rayLength;
-    this._farPosition = 0.01;
-    this._hitDistance = Number.POSITIVE_INFINITY;
+    this._farPosition = 0;
+    this._hitDistance = 100.0;
     this._finished = false;
 
+    this.hitting = false;
+
+    this.colorHex = 0x00ff00;
     const baseMaterial = new MeshBasicMaterial({
-      color: new Color(0x00ff00),
+      color: new Color(this.colorHex),
     });
     this._baseMaterial = baseMaterial;
 
@@ -118,6 +126,7 @@ class LaserRay extends Object3D {
   }
 
   setColorHex(colorHex) {
+    this.colorHex = colorHex;
     this._baseMaterial.color.setHex(colorHex);
   }
 
@@ -142,13 +151,14 @@ class LaserRay extends Object3D {
     this._rayEndMesh.scale.z = 0.2;
 
     this._rayGroup.position.z = -nearPosition;
-    this._rayGroup.scale.z = ((farPosition - nearPosition) / this._rayGeometryLength);
+    this._rayGroup.scale.z = ((farPosition - nearPosition) / this._rayGeometryLength) + 0.001;
 
-    const hit = (this._farPosition >= this._hitDistance);
-    if (hit) {
+    const hitting = (this._farPosition >= this._hitDistance);
+    if (hitting) {
       this._rayEndMesh.position.z = -this._hitDistance;
     }
-    this._rayEndMesh.visible = hit;
+    this._rayEndMesh.visible = hitting;
+    this.hitting = hitting;
 
     this._finished = (this._nearPosition >= this._hitDistance);
     this.visible = !this._finished;
@@ -170,6 +180,48 @@ const GUIColorThreeHex = ({ colorHex, onChange, onFinishChange, ...props }) => {
 };
 
 
+function createKeyboardHandler() {
+  const _pressedKeys = new Map();
+
+  function update(timeStep) {
+    _pressedKeys.forEach((time, key) => { _pressedKeys.set(key, time + timeStep); });
+  }
+
+  function onKeyDown(event) {
+    const key = vkey[event.keyCode];
+    _pressedKeys.set(key, 0);
+  }
+
+  function onKeyUp(event) {
+    const key = vkey[event.keyCode];
+    _pressedKeys.delete(key);
+  }
+
+  function isDown(key) {
+    return _pressedKeys.has(key);
+  }
+
+  function destroy() {
+    document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('keyup', onKeyUp);
+  }
+
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+
+  return {
+    update: update,
+    isDown: isDown,
+    destroy: destroy,
+  };
+}
+
+
+function thresholdAbsMin(value, valueMin) {
+  return (Math.abs(value) < Math.abs(valueMin) ? 0 : value);
+}
+
+
 class SompylasarWebsiteVRScene extends Component {
   constructor(props) {
     super(props);
@@ -187,10 +239,15 @@ class SompylasarWebsiteVRScene extends Component {
     this._joymapQuery = createQueryModule();
     this._joymap.addModule(this._joymapQuery);
 
+    this._keyboard = createKeyboardHandler();
+
+    this._gamepadLastActiveTime = 0;
+    this._keyboardLastActiveTime = 0;
+
     this._gamepadFlyControlsObject = new Object3D();
     this._gamepadFlyControls = new GamepadFlyControls(this._gamepadFlyControlsObject);
     this._gamepadFlyControls.movementSpeed = 1.0;
-    this._gamepadFlyControls.rollSpeed = 0.0001;
+    this._gamepadFlyControls.rollInput = 0.0001;
 
     this._markers = [];
 
@@ -199,12 +256,54 @@ class SompylasarWebsiteVRScene extends Component {
 
     this._cameraDolly = null;
 
-    const gridCellSize = 0.5;
-    const gridCells = 20;
-    this._grid = new GridHelper(gridCells * gridCellSize, gridCells, 0xffffff, 0xffffff);
-    this._scene.add(this._grid);
+    const floorGeometry = new PlaneGeometry( 10, 10, 10, 10 );
+    floorGeometry.rotateX(-0.5 * Math.PI);
+    const floorMaterial = new MeshBasicMaterial({ color: 0x101010, side: DoubleSide });
+    this._floorMesh = new Mesh( floorGeometry, floorMaterial );
+    this._scene.add(this._floorMesh);
+
+
+    this._room = new Mesh(
+  		new BoxGeometry( 6, 6, 6, 8, 8, 8 ),
+  		new MeshBasicMaterial( { color: 0x404040, wireframe: true } )
+  	);
+  	this._scene.add( this._room );
+
+  	this._scene.add( new HemisphereLight( 0x606060, 0x404040 ) );
+
+  	const light = new DirectionalLight( 0xffffff );
+  	light.position.set( 1, 1, 1 ).normalize();
+  	this._scene.add( light );
+
+  	const boxGeometry = new BoxGeometry( 0.15, 0.15, 0.15 );
+
+  	for ( let i = 0; i < 200; i ++ ) {
+  		const cube = new Mesh( boxGeometry, new MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+
+  		cube.position.x = Math.random() * 4 - 2;
+  		cube.position.y = Math.random() * 4 - 2;
+  		cube.position.z = Math.random() * 4 - 2;
+
+  		cube.rotation.x = Math.random() * 2 * Math.PI;
+  		cube.rotation.y = Math.random() * 2 * Math.PI;
+  		cube.rotation.z = Math.random() * 2 * Math.PI;
+
+  		cube.scale.x = Math.random() + 0.5;
+  		cube.scale.y = Math.random() + 0.5;
+  		cube.scale.z = Math.random() + 0.5;
+
+  		cube.userData.velocity = new Vector3();
+  		cube.userData.velocity.x = Math.random() * 0.01 - 0.005;
+  		cube.userData.velocity.y = Math.random() * 0.01 - 0.005;
+  		cube.userData.velocity.z = Math.random() * 0.01 - 0.005;
+
+      cube.userData.health = 1.0;
+
+  		this._room.add( cube );
+  	}
 
     this._rays = [];
+    this._raycaster = new Raycaster();
 
     this.props.setUpdate(this._updateScene);
 
@@ -225,12 +324,26 @@ class SompylasarWebsiteVRScene extends Component {
     };
   }
 
+  componentDidMount() {
+    this._warnCount = 0;
+    const warn = console.warn;
+    console.warn = function (...args) {
+      ++this._warnCount;
+      if (this._warnCount > 10) {
+        this._warnCount = 0;
+        throw new Error(args.join(' '));
+      }
+      return warn.apply(console, args);
+    };
+  }
+
   componentDidUpdate() {
     this._effectBloom.copyUniforms[ "opacity" ].value = this.state.bloomStrength;
     this._effectFXAA.uniforms.resolution.value = new Vector2(1 / this.props.rendererSize.width, 1 / this.props.rendererSize.height);
   }
 
   componentWillUnmount() {
+    this._keyboard.destroy();
     this.props.setUpdate(null);
     // Reset the saved state.
     this.props.saveSceneState(null);
@@ -249,21 +362,22 @@ class SompylasarWebsiteVRScene extends Component {
       this._gamepadFlyControlsObject.position.copy(this._cameraDolly.position);
       this._scene.add(this._cameraDolly);
 
-      /*
-      const geom = new CylinderGeometry(
-        0.1, 0.1, 2.0, 10, 2, false
-      );
-      geom.translate(0, 2.0 / 2, 0);
-      geom.rotateX(-0.5 * Math.PI);
-      this._flyingObject = new Mesh(geom, new MeshBasicMaterial({ color: 0xff0000 }));
-      this._flyingObject.scale.x = 1.5;
-      this._flyingObject.scale.y = 0.5;
-      this._flyingObject.scale.z = 0.5;
-      this._flyingObject.position.set(0,0,0);
-      this._scene.add(this._flyingObject);
-      */
-
-      this._flyingObject = this._cameraDolly;
+      if (false) {
+        const geom = new CylinderGeometry(
+          0.1, 0.1, 2.0, 10, 2, false
+        );
+        geom.translate(0, 2.0 / 2, 0);
+        geom.rotateX(-0.5 * Math.PI);
+        this._flyingObject = new Mesh(geom, new MeshBasicMaterial({ color: 0xff0000 }));
+        this._flyingObject.scale.x = 1.5;
+        this._flyingObject.scale.y = 0.5;
+        this._flyingObject.scale.z = 0.5;
+        this._flyingObject.position.set(0,0,0);
+        this._scene.add(this._flyingObject);
+      }
+      else {
+        this._flyingObject = this._cameraDolly;
+      }
     }
 
     this._joymap.poll();
@@ -272,24 +386,53 @@ class SompylasarWebsiteVRScene extends Component {
     const leftFlap = this._joymapQuery.getButtons('L2');
     const rightFlap = this._joymapQuery.getButtons('R2');
 
-    if (rightStick) {
-      const accel = (rightFlap ? rightFlap.value : 0);
-      const decel = (leftFlap ? leftFlap.value : 0);
-      this._gamepadFlyControls.moveVector.set(0, 0, -(0.0002 * (1.0 + 2.5 * accel - 2.5 * decel)));
-      const leftStickPitch = leftStick.value[1];
-      const rightStickPitch = rightStick.value[1];
-      this._gamepadFlyControls.setGamepadValues(
-        rightStick.value[0],
-        -((leftStickPitch * 0.3 + (rightStickPitch * leftStickPitch <= 0 ? 0 : rightStickPitch * 0.2)) * (1.0 + 4.5 * accel)),
-        leftStick.value[0] * 0.8 * (1.0 + 2.5 * accel)
-      );
-      this._gamepadFlyControls.update(timeStep);
-      this._flyingObject.position.copy(this._gamepadFlyControlsObject.position);
-      this._flyingObject.quaternion.copy(this._gamepadFlyControlsObject.quaternion);
+    let yawInput = 0;
+    let pitchInput = 0;
+    let rollInput = 0;
+    let moveInput = 0;
+
+    this._keyboard.update(timeStep);
+
+    let leftX = 0.3 * thresholdAbsMin(leftStick.value[0], 0.15);
+    let leftY = 0.3 * (leftStick ? thresholdAbsMin(leftStick.value[1], 0.15) : 0);
+    let rightX = 0.3 * thresholdAbsMin(rightStick.value[0], 0.15);
+    let rightY = 0.3 * (rightStick ? thresholdAbsMin(rightStick.value[1], 0.15) : 0);
+    let accel = (rightFlap ? thresholdAbsMin(rightFlap.value, 0.15) : 0);
+    let decel = (leftFlap ? thresholdAbsMin(leftFlap.value, 0.15) : 0);
+    if (leftX !== 0 || leftY !== 0 || rightX !== 0 || rightY !== 0 || accel !== 0 || decel !== 0) {
+      this._gamepadLastActiveTime = time;
     }
-    this._flyingObject.position.x = Math.max(-5, Math.min(5, this._flyingObject.position.x));
-    this._flyingObject.position.y = Math.max(0.3, Math.min(5, this._flyingObject.position.y));
-    this._flyingObject.position.z = Math.max(-5, Math.min(5, this._flyingObject.position.z));
+
+    const leftXKeyboard = 0.3 * ((this._keyboard.isDown('A') ? -1 : 0) + (this._keyboard.isDown('D') ? 1 : 0));
+    const leftYKeyboard = 0.3 * ((this._keyboard.isDown('W') ? -1 : 0) + (this._keyboard.isDown('S') ? 1 : 0));
+    const rightXKeyboard = 0.05 * ((this._keyboard.isDown('<left>') ? -1 : 0) + (this._keyboard.isDown('<right>') ? 1 : 0));
+    const rightYKeyboard = 0.3 * ((this._keyboard.isDown('<up>') ? -1 : 0) + (this._keyboard.isDown('<down>') ? 1 : 0));
+    const accelKeyboard = 0;
+    const decelKeyboard = 0;
+    if (leftXKeyboard !== 0 || leftYKeyboard !== 0 || rightXKeyboard !== 0 || rightYKeyboard !== 0 || accelKeyboard !== 0 || decelKeyboard !== 0) {
+      this._keyboardLastActiveTime = time;
+    }
+
+    if (this._keyboardLastActiveTime > this._gamepadLastActiveTime) {
+      leftX = leftXKeyboard;
+      leftY = leftYKeyboard;
+      rightX = rightXKeyboard;
+      rightY = rightYKeyboard;
+      accel = accelKeyboard;
+      decel = decelKeyboard;
+    }
+
+    yawInput = (rightX);
+    pitchInput = -((leftY * 0.3 + (rightY * leftY <= 0 ? 0 : rightY * 0.2)) * (1.0 + 4.5 * accel));
+    rollInput = (leftX * 0.8 * (1.0 + 2.5 * accel));
+    moveInput = (0.0002 * (1.0 + 2.5 * accel - 2.5 * decel));
+
+    this._gamepadFlyControls.setSpeeds(yawInput * 0.005, pitchInput * 0.005, rollInput * 0.005, moveInput);
+    this._gamepadFlyControls.update(timeStep);
+    this._flyingObject.position.copy(this._gamepadFlyControlsObject.position);
+    this._flyingObject.quaternion.copy(this._gamepadFlyControlsObject.quaternion);
+
+    this._flyingObject.position.y = Math.max(0.3, this._flyingObject.position.y);
 
     this._markers.forEach((marker) => {
       marker.update(timeStep, time);
@@ -300,7 +443,6 @@ class SompylasarWebsiteVRScene extends Component {
 
       const ray = new LaserRay();
       ray.setColorHex(this.state.rayBaseColor);
-      ray.setHitDistance(10.0);
       this._flyingObject.updateMatrixWorld();
       const raySourceOffset = new Vector3(0, -0.13, 0);
       const pos = this._flyingObject.localToWorld(this._flyingObject.worldToLocal(this._flyingObject.position.clone()).add(raySourceOffset));
@@ -309,18 +451,80 @@ class SompylasarWebsiteVRScene extends Component {
       this._scene.add(ray);
       this._rays.push(ray);
     }
-    else {
-      for (let ic = this._rays.length, i = 0; i < ic; ++i) {
-        const ray = this._rays[i];
-        ray.update(timeStep);
-        if (!ray.visible) {
-          this._scene.remove(ray);
-          this._rays.splice(i, 1);
-          --ic;
-          --i;
-        }
+
+    if (!this._markersIntersections) { this._markersIntersections = []; }
+    while (this._markersIntersections.length > 10) {
+      this._scene.remove(this._markersIntersections[0]);
+      this._markersIntersections.splice(0, 1);
+    }
+
+    for (let ic = this._rays.length, i = 0; i < ic; ++i) {
+      const ray = this._rays[i];
+
+      const direction = ray.localToWorld(ray.worldToLocal(ray.position.clone()).add(new Vector3(0, 0, -1))).sub(ray.position).normalize();
+      this._raycaster.set(ray.position, direction);
+      //this._scene.add(makeDebugMarker(ray.colorHex, ray.position, '', this._markersIntersections));
+
+      const intersections = this._raycaster.intersectObjects(this._room.children).filter((x) => (x.distance > 0));
+      const intersection = intersections[0];
+      if (intersection) {
+        //this._scene.add(makeDebugMarker(ray.colorHex, intersection.point, '', this._markersIntersections));
+        ray.setHitDistance(intersections[0].distance);
+      }
+      else {
+        ray.setHitDistance(100.0);
+      }
+
+      ray.update(timeStep);
+
+      if (!ray.visible) {
+        this._scene.remove(ray);
+        this._rays.splice(i, 1);
+        --ic;
+        --i;
+        continue;
+      }
+
+      if (ray.hitting && intersection && intersection.object) {
+        const cube = intersection.object;
+
+        cube.userData.health -= 0.02;
+        cube.material.opacity = cube.userData.health;
+
+        cube.userData.velocity.add(
+          direction.clone().cross(intersection.face.normal.clone().multiplyScalar(0.001))
+        );
       }
     }
+
+    // Keep cubes inside room
+		for ( let i = 0; i < this._room.children.length; i ++ ) {
+			const cube = this._room.children[ i ];
+      if (cube.userData.health <= 0) {
+        this._room.remove(cube);
+        --i;
+        continue;
+      }
+
+			cube.userData.velocity.multiplyScalar( 1 - ( 0.001 * timeStep ) );
+			cube.position.add( cube.userData.velocity );
+			if ( cube.position.x < - 3 || cube.position.x > 3 ) {
+				cube.position.x = THREEMath.clamp( cube.position.x, - 3, 3 );
+				cube.userData.velocity.x = - cube.userData.velocity.x;
+			}
+			if ( cube.position.y < - 3 || cube.position.y > 3 ) {
+				cube.position.y = THREEMath.clamp( cube.position.y, - 3, 3 );
+				cube.userData.velocity.y = - cube.userData.velocity.y;
+			}
+			if ( cube.position.z < - 3 || cube.position.z > 3 ) {
+				cube.position.z = THREEMath.clamp( cube.position.z, - 3, 3 );
+				cube.userData.velocity.z = - cube.userData.velocity.z;
+			}
+
+			cube.rotation.x += cube.userData.velocity.x * 2 * timeStep;
+			cube.rotation.y += cube.userData.velocity.y * 2 * timeStep;
+			cube.rotation.z += cube.userData.velocity.z * 2 * timeStep;
+		}
 
     return this._scene;
   }
