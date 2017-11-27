@@ -15,20 +15,18 @@ import {
 export const GamepadFlyControls = function (object) {
   // Internals
 
+  this._moveInputVector = new Vector3(0, 0, 0);
+  this._rotationInputVector = new Vector3(0, 0, 0);
+  this._rotationQuaternion = new Quaternion();
+
+  // API
+
   this.object = object;
-
-  this.tmpMoveVector = new Vector3();
-  this.tmpQuaternion = new Quaternion();
-
-  this.rotationVector = new Vector3(0, 0, 0);
-  this.moveVector = new Vector3(0, 0, 0);
-
   this.yawSpeed = 0;
   this.pitchSpeed = 0;
   this.rollSpeed = 0;
   this.moveSpeed = 0;
-
-  // API
+  this.moveVector = new Vector3();
 
   this.setSpeeds = function (yawSpeed, pitchSpeed, rollSpeed, moveSpeed) {
     this.yawSpeed = yawSpeed || 0;
@@ -38,17 +36,16 @@ export const GamepadFlyControls = function (object) {
   };
 
   this.update = function (timeStep) {
-    this.rotationVector.x = -this.pitchSpeed * timeStep;
-    this.rotationVector.y = -this.yawSpeed * timeStep;
-    this.rotationVector.z = -this.rollSpeed * timeStep;
+    this._rotationInputVector.x = -this.pitchSpeed * timeStep;
+    this._rotationInputVector.y = -this.yawSpeed * timeStep;
+    this._rotationInputVector.z = -this.rollSpeed * timeStep;
 
-    this.moveVector.z = -this.moveSpeed * timeStep;
+    this._moveInputVector.z = -this.moveSpeed * timeStep;
 
-    this.tmpQuaternion.set(this.rotationVector.x, this.rotationVector.y, this.rotationVector.z, 1).normalize();
-    this.object.quaternion.multiply(this.tmpQuaternion);
+    this._rotationQuaternion.set(this._rotationInputVector.x, this._rotationInputVector.y, this._rotationInputVector.z, 1).normalize();
+    this.object.quaternion.multiply(this._rotationQuaternion);
 
-    this.tmpMoveVector.copy(this.moveVector);
-    this.tmpMoveVector.applyQuaternion(this.object.quaternion);
-    this.object.position.add(this.tmpMoveVector);
+    this.moveVector.copy(this._moveInputVector).applyQuaternion(this.object.quaternion);
+    this.object.position.add(this.moveVector);
   };
 };
