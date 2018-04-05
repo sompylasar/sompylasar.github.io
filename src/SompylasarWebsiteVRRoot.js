@@ -14,8 +14,8 @@ const SompylasarWebsiteVRRoot = ({ isDebug }) => (
     render={({ saveState, restoreState, resetState }) => (
       <VRCanvas
         isDebug={isDebug}
-        isMono={isDebug}
-        autoPresent={isDebug}
+        isMono={true}
+        autoPresent={false}
         render={({
           isReadyToPresent,
           isPresenting,
