@@ -7,7 +7,6 @@ import {
   Object3D,
   Vector2,
   Vector3,
-  Matrix4,
   Quaternion,
   Color,
   BoxGeometry,
@@ -15,7 +14,6 @@ import {
   SphereGeometry,
   MeshBasicMaterial,
   MeshLambertMaterial,
-  ShaderMaterial,
   BackSide,
   DoubleSide,
   Mesh,
@@ -34,9 +32,6 @@ import { ShaderPass } from './three/ShaderPass';
 import { BloomPass } from './three/BloomPass';
 import { FXAAShader } from './three/FXAAShader';
 import { CopyShader } from './three/CopyShader';
-import { GamepadFlyControls } from './three/GamepadFlyControls';
-
-import GLSL from 'glslify';
 
 
 const markerSize = 0.02;
@@ -266,9 +261,6 @@ class SompylasarWebsiteVRScene extends Component {
     this._gamepadLastActiveTime = 0;
     this._keyboardLastActiveTime = 0;
 
-    this._gamepadFlyControlsObject = new Object3D();
-    this._gamepadFlyControls = new GamepadFlyControls(this._gamepadFlyControlsObject);
-
     this._markers = [];
 
     this._scene = new Scene();
@@ -301,10 +293,7 @@ class SompylasarWebsiteVRScene extends Component {
       this._scene.add(mesh);
     }
 
-    this._room = new Mesh(
-  		new BoxGeometry( 6, 6, 6, 8, 8, 8 ),
-  		new MeshBasicMaterial( { color: 0x404040, visible: false, wireframe: true } )
-  	);
+    this._room = new Object3D();
   	this._scene.add( this._room );
 
   	this._scene.add( new HemisphereLight( 0x606060, 0x404040 ) );
@@ -313,47 +302,22 @@ class SompylasarWebsiteVRScene extends Component {
   	light.position.set( 1, 1, 1 ).normalize();
   	this._scene.add( light );
 
-  	const boxGeometry = new BoxGeometry( 1, 1, 1 );
+  	this._boxGeometry = new BoxGeometry( 1, 1, 1 );
 
-    for ( let i = 0; i < 30; i ++ ) {
-  		const cube = new Mesh( boxGeometry, new MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
-
-  		cube.position.x = Math.random() * 4 - 2;
-  		cube.position.y = Math.random() * 4 - 2;
-  		cube.position.z = Math.random() * 4 - 2;
-
-  		cube.rotation.x = Math.random() * 2 * Math.PI;
-  		cube.rotation.y = Math.random() * 2 * Math.PI;
-  		cube.rotation.z = Math.random() * 2 * Math.PI;
-
-      const size = 0.35;
-  		cube.scale.x = size * (Math.random() + 0.5);
-  		cube.scale.y = size * (Math.random() + 0.5);
-  		cube.scale.z = size * (Math.random() + 0.5);
-
-      cube.userData.physicsBody = new CANNON.Body({
-        mass: 1,
-        position: new CANNON.Vec3().copy(cube.position),
-        quaternion: new CANNON.Quaternion().copy(cube.quaternion),
-        shape: new CANNON.Box(new CANNON.Vec3().copy(cube.scale).scale(0.5)),
-        angularDamping: 0.001,
-      });
-      this._physicsWorld.add(cube.userData.physicsBody);
-
-  		cube.userData.velocity = new Vector3();
-  		cube.userData.velocity.x = Math.random() * 0.01 - 0.005;
-  		cube.userData.velocity.y = Math.random() * 0.01 - 0.005;
-  		cube.userData.velocity.z = Math.random() * 0.01 - 0.005;
-
-      cube.userData.angularVelocity = new Vector3();
-  		cube.userData.angularVelocity.x = Math.random() * 0.01 - 0.005;
-  		cube.userData.angularVelocity.y = Math.random() * 0.01 - 0.005;
-  		cube.userData.angularVelocity.z = Math.random() * 0.01 - 0.005;
-
-      cube.userData.health = 1.0;
-
-  		this._room.add( cube );
-  	}
+    if (!this._sceneState.colors) {
+      this._sceneState.colors = [];
+      const NUMBER_OF_COLORS = 50;
+      for (let i = 0; i < NUMBER_OF_COLORS; ++i) {
+        this._sceneState.colors[i] = 0.8 * Math.random() * 0xffffff;
+      }
+    }
+    this._materials = [];
+    for (let i = 0, ic = this._sceneState.colors.length; i < ic; ++i) {
+      this._materials[i] = new MeshLambertMaterial({ color: this._sceneState.colors[i] });
+    }
+    const NUMBER_OF_CUBES = 1;
+    this._cubesToAdd = NUMBER_OF_CUBES;
+    this._cubesToRemove = NUMBER_OF_CUBES;
 
     this._focusedMesh = new Mesh(
   		new BoxGeometry( 1, 1, 1, 3, 3, 3 ),
@@ -378,9 +342,18 @@ class SompylasarWebsiteVRScene extends Component {
       this._effectCopy,
     ]);
 
+    this._gameInit = true;
     this.state = {
-      rayBaseColor: 0x00ff00,
+      rayBaseColor: 0xffaa00,
       bloomStrength: this._effectBloom.copyUniforms[ "opacity" ].value,
+      score: 0,
+      scoreChangeLast: 0,
+      scoreChangeTimesLast: 0,
+      scoreChange: 0,
+      scoreChangeTimes: 0,
+      scoreChangeVisible: false,
+      gameInit: this._gameInit,
+      gameWin: false,
     };
   }
 
@@ -407,11 +380,66 @@ class SompylasarWebsiteVRScene extends Component {
     this.props.setUpdate(null);
     // Reset the saved state.
     this.props.saveSceneState(null);
+    clearTimeout(this._scoreChangeTimer);
+  }
+
+  _addCube() {
+    // TODO(@sompylasar): Store the cubes in persisted scene state.
+    const MIN_RADIUS = 20;
+    const MAX_RADIUS = 1;
+
+    const cube = new Mesh(this._boxGeometry, this._materials[Math.floor(Math.random() * this._materials.length)]);
+
+    const angle = (Math.random() * 2 - 1) * Math.PI;
+    const radius = MIN_RADIUS + Math.random() * (MAX_RADIUS - MIN_RADIUS);
+    cube.position.x = radius * Math.cos(angle);
+    cube.position.y = 0;
+    cube.position.z = radius * Math.sin(angle);
+
+    cube.rotation.x = Math.random() * 2 * Math.PI;
+    cube.rotation.y = Math.random() * 2 * Math.PI;
+    cube.rotation.z = Math.random() * 2 * Math.PI;
+
+    const size = 0.35;
+    cube.scale.x = size * (Math.random() + 0.5);
+    cube.scale.y = size * (Math.random() + 0.5);
+    cube.scale.z = size * (Math.random() + 0.5);
+
+    cube.userData.physicsBody = new CANNON.Body({
+      mass: 1,
+      position: new CANNON.Vec3().copy(cube.position),
+      quaternion: new CANNON.Quaternion().copy(cube.quaternion),
+      shape: new CANNON.Box(new CANNON.Vec3().copy(cube.scale).scale(0.5)),
+      angularDamping: 0.01,
+    });
+    this._physicsWorld.add(cube.userData.physicsBody);
+
+    cube.scale.multiplyScalar(0.01);
+
+    cube.userData.velocity = new Vector3();
+    cube.userData.velocity.x = Math.random() * 0.1 - 0.005;
+    cube.userData.velocity.y = Math.random() * 0.1 - 0.005;
+    cube.userData.velocity.z = Math.random() * 0.1 - 0.005;
+
+    cube.userData.angularVelocity = new Vector3();
+    cube.userData.angularVelocity.x = Math.random() * 0.01 - 0.005;
+    cube.userData.angularVelocity.y = Math.random() * 0.01 - 0.005;
+    cube.userData.angularVelocity.z = Math.random() * 0.01 - 0.005;
+
+    cube.userData.health = 1.0;
+
+    this._room.add( cube );
   }
 
   _updateScene = (timeStep, camera) => {
     const time = this._sceneState.time + timeStep;
     this._sceneState.time = time;
+
+    if ((!this._sceneState.nextCubeTime || time >= this._sceneState.nextCubeTime) && (this._cubesToAdd > 0)) {
+      this._sceneState.nextCubeTime = time + 100;
+      --this._cubesToAdd;
+      this._addCube();
+    }
 
     if (!this._cameraDolly) {
       this._cameraDolly = new Object3D();
@@ -419,7 +447,6 @@ class SompylasarWebsiteVRScene extends Component {
       this._cameraDolly.add(camera);
       this._cameraDolly.position.y = 0.5;
       this._cameraDolly.position.z = 5;
-      this._gamepadFlyControlsObject.position.copy(this._cameraDolly.position);
       this._scene.add(this._cameraDolly);
 
       if (false) {
@@ -449,7 +476,7 @@ class SompylasarWebsiteVRScene extends Component {
       this._flyingObject.userData.physicsBody = new CANNON.Body({
         mass: 100,
         position: new CANNON.Vec3(this._flyingObject.position.x, this._flyingObject.position.y, this._flyingObject.position.z),
-        shape: new CANNON.Sphere(0.3),
+        shape: new CANNON.Sphere(0.4),
       });
       this._physicsWorld.add(this._flyingObject.userData.physicsBody);
     }
@@ -459,11 +486,6 @@ class SompylasarWebsiteVRScene extends Component {
     const rightStick = this._joymapQuery.getSticks('R');
     const leftFlap = this._joymapQuery.getButtons('L2');
     const rightFlap = this._joymapQuery.getButtons('R2');
-
-    let yawInput = 0;
-    let pitchInput = 0;
-    let rollInput = 0;
-    let moveInput = 0;
 
     this._keyboard.update(timeStep);
 
@@ -487,35 +509,6 @@ class SompylasarWebsiteVRScene extends Component {
       this._keyboardLastActiveTime = time;
     }
 
-    if (this._keyboardLastActiveTime > this._gamepadLastActiveTime) {
-      leftX = leftXKeyboard;
-      leftY = leftYKeyboard;
-      rightX = rightXKeyboard;
-      rightY = rightYKeyboard;
-      accel = accelKeyboard;
-      decel = decelKeyboard;
-    }
-
-    yawInput = (rightX);
-    pitchInput = -((leftY * 0.3 + (rightY * leftY <= 0 ? 0 : rightY * 0.2)) * (1.0 + 0.7 * accel));
-    rollInput = (leftX * 0.8 * (1.0 + 0.5 * accel));
-    moveInput = (0.0005 * (1.0 + 2.5 * accel - 2.5 * decel));
-
-    this._gamepadFlyControls.setSpeeds(yawInput * 0.005, pitchInput * 0.005, rollInput * 0.005, moveInput);
-    this._gamepadFlyControls.update(timeStep);
-    this._flyingObject.position.copy(this._gamepadFlyControlsObject.position);
-    this._flyingObject.quaternion.copy(this._gamepadFlyControlsObject.quaternion);
-    this._flyingObject.updateMatrixWorld();
-
-    this._flyingObject.userData.physicsBody.position.copy(this._flyingObject.position);
-    this._flyingObject.userData.physicsBody.quaternion.copy(this._flyingObject.quaternion);
-
-    this._physicsWorld.step(timeStep);
-
-    this._markers.forEach((marker) => {
-      marker.update(timeStep, time);
-    });
-
     const leftStickButton = this._joymapQuery.getButtons('L3');
     const rightStickButton = this._joymapQuery.getButtons('R3');
     const buttonA = this._joymapQuery.getButtons('A');
@@ -527,11 +520,94 @@ class SompylasarWebsiteVRScene extends Component {
       (this._keyboard.isDown('<space>') ? 1.0 : 0.0)
     );
 
-    const raySourceOffset = new Vector3(0, -0.02, 0);
+    if (this._keyboardLastActiveTime > this._gamepadLastActiveTime) {
+      leftX = leftXKeyboard;
+      leftY = leftYKeyboard;
+      rightX = rightXKeyboard;
+      rightY = rightYKeyboard;
+      accel = accelKeyboard;
+      decel = decelKeyboard;
+    }
+
+    const yawInput = (rightX);
+    const pitchInput = -((leftY * 0.3 + (rightY * leftY <= 0 ? 0 : rightY * 0.2)) * (1.0 + 0.7 * accel));
+    const rollInput = (leftX * 0.8 * (1.0 + 0.5 * accel));
+    const moveInput = (0.0025 * (0.05 + 2.5 * accel - 2.5 * decel));
+
+    if (this._gameInit && (
+      Math.abs(leftX) > 0.01 ||
+      Math.abs(leftY) > 0.01 ||
+      Math.abs(rightX) > 0.01 ||
+      Math.abs(rightY) > 0.01 ||
+      Math.abs(accel) > 0.01 ||
+      Math.abs(decel) > 0.01 ||
+      fire
+    )) {
+      this._gameInit = false;
+      this.setState({
+        gameInit: false,
+      });
+    }
+
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0.0005 * (yawInput > 0 ? -yawInput : 0), 0, 0),
+      new CANNON.Vec3(-0.1, 0, 2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0.0005 * (yawInput < 0 ? -yawInput : 0), 0, 0),
+      new CANNON.Vec3(0.1, 0, 2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0.0005 * (pitchInput > 0 ? pitchInput : 0), 0),
+      new CANNON.Vec3(0, 0, 2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0.0005 * (pitchInput < 0 ? pitchInput : 0), 0),
+      new CANNON.Vec3(0, 0, 2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0.0005 * (rollInput > 0 ? rollInput : 0), 0),
+      new CANNON.Vec3(2, 0, 0)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0.0005 * (rollInput < 0 ? -rollInput : 0), 0),
+      new CANNON.Vec3(-2, 0, 0)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0, 0.5 * -(moveInput > 0 ? moveInput : 0)),
+      new CANNON.Vec3(0, 2, -2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0, 0.5 * -(moveInput > 0 ? moveInput : 0)),
+      new CANNON.Vec3(0, -2, -2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0, 0.5 * (moveInput < 0 ? -moveInput : 0)),
+      new CANNON.Vec3(0, 2, 2)
+    );
+    this._flyingObject.userData.physicsBody.applyLocalForce(
+      new CANNON.Vec3(0, 0, 0.5 * (moveInput < 0 ? -moveInput : 0)),
+      new CANNON.Vec3(0, -2, 2)
+    );
+
+    this._flyingObject.position.copy(this._flyingObject.userData.physicsBody.position);
+    this._flyingObject.quaternion.copy(this._flyingObject.userData.physicsBody.quaternion);
+    this._flyingObject.updateMatrixWorld();
+
+    this._physicsWorld.step(timeStep);
+
+    this._markers.forEach((marker) => {
+      marker.update(timeStep, time);
+    });
+
+    const raySourceOffset = (
+      (this._sceneState.raysFired || 0) % 2 === 0
+        ? new Vector3(-0.15, -0.07, 0)
+        : new Vector3(0.15, -0.07, 0)
+    );
     const raySourcePos = this._flyingObject.localToWorld(this._flyingObject.worldToLocal(this._flyingObject.position.clone()).add(raySourceOffset));
     const raySourceQuaternion = (new Quaternion()).setFromAxisAngle(new Vector3(1, 0, 0), 0.01 * Math.PI).multiply(this._flyingObject.quaternion);
     let focusedObject = null;
-
     {
       const raySourceDirection = new Vector3(0, 0, -1).applyQuaternion(raySourceQuaternion).normalize();
       this._raycaster.set(raySourcePos, raySourceDirection);
@@ -543,7 +619,8 @@ class SompylasarWebsiteVRScene extends Component {
     }
 
     if ((!this._sceneState.nextRayTime || time >= this._sceneState.nextRayTime) && fire) {
-      this._sceneState.nextRayTime = time + 300;
+      this._sceneState.raysFired = (this._sceneState.raysFired || 0) + 1;
+      this._sceneState.nextRayTime = time + 250;
 
       const ray = new LaserRay();
       ray.setColorHex(this.state.rayBaseColor);
@@ -565,12 +642,16 @@ class SompylasarWebsiteVRScene extends Component {
 
       const rayDirection = new Vector3(0, 0, -1).applyQuaternion(ray.quaternion).normalize();
       this._raycaster.set(ray.position, rayDirection);
-      //this._scene.add(makeDebugMarker(ray.colorHex, ray.position, '', this._markersIntersections));
+      if (false) {
+        this._scene.add(makeDebugMarker(ray.colorHex, ray.position, '', this._markersIntersections));
+      }
 
       const intersections = this._raycaster.intersectObjects(this._room.children).filter((x) => (x.distance > 0));
       const intersection = intersections[0];
       if (intersection) {
-        //this._scene.add(makeDebugMarker(ray.colorHex, intersection.point, '', this._markersIntersections));
+        if (false) {
+          this._scene.add(makeDebugMarker(ray.colorHex, intersection.point, '', this._markersIntersections));
+        }
         ray.setHitDistance(intersections[0].distance);
       }
       else {
@@ -590,7 +671,7 @@ class SompylasarWebsiteVRScene extends Component {
       if (!ray.reflectionRay && ray.state.hitting && intersection && intersection.object) {
         const cube = intersection.object;
 
-        cube.userData.health -= 0.2;
+        cube.userData.health -= 0.1;
         cube.material.opacity = cube.userData.health;
 
         const normal = intersection.face.normal.clone().applyQuaternion(cube.quaternion);
@@ -633,36 +714,40 @@ class SompylasarWebsiteVRScene extends Component {
 			const cube = this._room.children[ i ];
       if (cube.userData.health <= 0) {
         cube.scale.multiplyScalar(0.8);
+        if (cube.scale.x < 0.01) {
+          this._room.remove(cube);
+          --i;
+          --this._cubesToRemove;
+          clearTimeout(this._scoreChangeTimer);
+          this.setState((state) => ({
+            scoreChange: state.scoreChange + (state.scoreChangeTimes + 1 >= 3 ? 200 : 100),
+            scoreChangeTimes: state.scoreChangeTimes + 1,
+            scoreChangeVisible: true,
+          }), () => {
+            clearTimeout(this._scoreChangeTimer);
+            this._scoreChangeTimer = setTimeout(() => {
+              this.setState((state) => ({
+                scoreChangeLast: state.scoreChange,
+                scoreChangeTimesLast: state.scoreChangeTimes,
+                score: state.score + state.scoreChange,
+                scoreChange: 0,
+                scoreChangeTimes: 0,
+                scoreChangeVisible: false,
+                gameWin: (this._cubesToRemove <= 0),
+              }));
+            }, 1000);
+          })
+          continue;
+        }
       }
-      if (cube.scale.x < 0.01) {
-        this._room.remove(cube);
-        --i;
-        continue;
+      else if (cube.scale.x < 0.35 || cube.scale.y < 0.35 || cube.scale.z < 0.35) {
+        cube.scale.multiplyScalar(1.5);
+        cube.userData.physicsBody.shapes[0].halfExtents = new CANNON.Vec3().copy(cube.scale).scale(0.5);
+        cube.userData.physicsBody.shapes[0].updateConvexPolyhedronRepresentation();
+        cube.userData.physicsBody.shapes[0].updateBoundingSphereRadius();
+        cube.userData.physicsBody.updateBoundingRadius();
+        cube.userData.physicsBody.updateMassProperties();
       }
-
-      /*
-			cube.userData.velocity.multiplyScalar( 1 - ( 0.001 * timeStep ) );
-      cube.userData.angularVelocity.multiplyScalar( 1 - ( 0.001 * timeStep ) );
-      const cubePos = cube.position;
-
-			cubePos.add( cube.userData.velocity );
-      cube.rotation.x += cube.userData.angularVelocity.x;
-			cube.rotation.y += cube.userData.angularVelocity.y;
-			cube.rotation.z += cube.userData.angularVelocity.z;
-
-			if ( cubePos.x < - 3 || cubePos.x > 3 ) {
-				cubePos.x = THREEMath.clamp( cubePos.x, - 3, 3 );
-				cube.userData.velocity.x = - cube.userData.velocity.x;
-			}
-			if ( cubePos.y < - 3 || cubePos.y > 3 ) {
-				cubePos.y = THREEMath.clamp( cubePos.y, - 3, 3 );
-				cube.userData.velocity.y = - cube.userData.velocity.y;
-			}
-			if ( cubePos.z < - 3 || cubePos.z > 3 ) {
-				cubePos.z = THREEMath.clamp( cubePos.z, - 3, 3 );
-				cube.userData.velocity.z = - cube.userData.velocity.z;
-			}
-      */
 
       const cubePos = cube.userData.physicsBody.position;
       if ( cubePos.x < - 3 || cubePos.x > 3 ) {
@@ -694,7 +779,7 @@ class SompylasarWebsiteVRScene extends Component {
     }
 
     {
-      const directionToCenter = this._room.position.clone().sub(this._gamepadFlyControlsObject.position);
+      const directionToCenter = this._room.position.clone().sub(this._flyingObject.position);
       const distance = directionToCenter.length();
       // TODO(@sompylasar): Re-orient to the center when far away.
     }
@@ -703,19 +788,87 @@ class SompylasarWebsiteVRScene extends Component {
   }
 
   render() {
-    if (this.props.isDebug) {
-      return (
-        <dg.GUI>
-          <GUIColorThreeHex label='rayBaseColor' colorHex={this.state.rayBaseColor} onChange={(colorHex) => { this.setState({ rayBaseColor: colorHex }); }} />
-          <dg.Number label='bloomStrength' min={0.0} max={10.0} value={this.state.bloomStrength} onChange={(value) => { this.setState({ bloomStrength: value }); }} />
-          <dg.Number label='slowFactor' min={0.01} max={30.0} value={this.props.slowFactor} onChange={(value) => { this.props.setSlow(value); }} />
-          <dg.Checkbox label='isDebug' checked={this.props.isDebug} onChange={(isDebug) => { this.props.setDebug(isDebug); }} />
-          <dg.Checkbox label='isMono' checked={this.props.isMono} onChange={(isMono) => { this.props.setMono(isMono); }} />
-        </dg.GUI>
-      );
-    }
+    const debugDOM = (
+      <dg.GUI>
+        <GUIColorThreeHex label='rayBaseColor' colorHex={this.state.rayBaseColor} onChange={(colorHex) => { this.setState({ rayBaseColor: colorHex }); }} />
+        <dg.Number label='bloomStrength' min={0.0} max={10.0} value={this.state.bloomStrength} onChange={(value) => { this.setState({ bloomStrength: value }); }} />
+        <dg.Number label='slowFactor' min={0.5} max={30.0} value={this.props.slowFactor} onChange={(value) => { this.props.setSlow(value); }} />
+        <dg.Checkbox label='isDebug' checked={this.props.isDebug} onChange={(isDebug) => { this.props.setDebug(isDebug); }} />
+        <dg.Checkbox label='isMono' checked={this.props.isMono} onChange={(isMono) => { this.props.setMono(isMono); }} />
+      </dg.GUI>
+    );
 
-    return null;
+    const {
+      rayBaseColor,
+      score,
+      scoreChangeLast,
+      scoreChangeTimesLast,
+      scoreChange,
+      scoreChangeTimes,
+      scoreChangeVisible,
+      gameInit,
+      gameWin,
+    } = this.state;
+
+    const scoreChangeDisplay = (scoreChangeVisible ? scoreChange : scoreChangeLast);
+    const color = '#' + (new Color(rayBaseColor)).getHexString();
+    const combo = ((scoreChangeVisible ? scoreChangeTimes : scoreChangeTimesLast) >= 3);
+
+    return (
+      <div>
+        {this.props.isDebug && debugDOM}
+        <div style={{
+          position: 'fixed',
+          left: '10%',
+          bottom: '10%',
+          zIndex: 10,
+          transform: (scoreChangeVisible ? 'scale(1.5)' : 'scale(1.0)'),
+          transition: 'transform 0.2s ease',
+          color: '#ffffff',
+          textShadow: '0 0 10px ' + color,
+          opacity: 0.8,
+        }}>
+          <span style={{ fontSize: '30px' }}>{'Score: '}</span>
+          <span style={{ fontSize: '60px' }}>{score + scoreChange}</span>
+        </div>
+        <div style={{
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          zIndex: 10,
+          transform: 'translate(-50%, -50%)',
+          transition: 'opacity 0.7s ease',
+          color: (combo ? color : '#ffffff'),
+          textShadow: '0 0 10px ' + color,
+          opacity: (scoreChangeVisible || gameInit || gameWin ? 1.0 : 0.0),
+        }}>
+          {gameInit
+            ? (
+              <span>
+                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'SHOOT THE BOXES!'}</span><br />
+                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'WASD+arrows+Q+E or Gamepad to fly'}</span><br />
+                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'SPACEBAR to shoot'}</span>
+              </span>
+            )
+            : null
+          }
+          {gameWin
+            ? (
+              <span>
+                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'YOU WIN!'}<br /></span>
+                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'RELOAD PAGE TO RESTART'}</span>
+              </span>
+            )
+            : (
+              <span>
+                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{scoreChangeDisplay ? '+' + scoreChangeDisplay : null}</span><br />
+                {combo && <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'COMBO!'}</span>}
+              </span>
+            )
+          }
+        </div>
+      </div>
+    );
   }
 }
 
