@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "sompylasar-website",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "@sompylasar's website. https://sompylasar.github.io/?utm_campaign=cv2017&utm_source=website-package-json&utm_medium=package-json-description",
   "homepage": "https://sompylasar.github.io/?utm_campaign=cv2017&utm_source=website-package-json&utm_medium=package-json-homepage",
   "repository": "git@github.com:sompylasar/sompylasar.github.io.git",
