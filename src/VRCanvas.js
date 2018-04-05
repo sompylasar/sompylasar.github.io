@@ -4,7 +4,7 @@ import 'webvr-polyfill';
 import {
   WebVRManager,
   State as WebVRManagerState,
-} from 'webvr-ui';
+} from 'webvr-ui/build/webvr-ui.js';
 
 import {
   WebGLRenderer,
@@ -14,8 +14,8 @@ import {
 import { StereoRendererWithEffectsComposer } from './three/StereoRendererWithEffectsComposer';
 
 import preventDefaultForEvent from './preventDefaultForEvent';
-import { createDisplayController } from './DisplayController';
-import { FPSMeter } from './FPSMeter';
+import { createDisplayController } from './displayController';
+import { FPSMeter } from './fpsmeter';
 
 
 class WindowVRDisplay {
