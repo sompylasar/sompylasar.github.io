@@ -315,7 +315,7 @@ class SompylasarWebsiteVRScene extends Component {
     for (let i = 0, ic = this._sceneState.colors.length; i < ic; ++i) {
       this._materials[i] = new MeshLambertMaterial({ color: this._sceneState.colors[i] });
     }
-    const NUMBER_OF_CUBES = 1;
+    const NUMBER_OF_CUBES = 50;
     this._cubesToAdd = NUMBER_OF_CUBES;
     this._cubesToRemove = NUMBER_OF_CUBES;
 
