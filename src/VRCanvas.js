@@ -125,6 +125,7 @@ class VRCanvas extends Component {
     }
     if (prevState.isMono !== this.state.isMono) {
       this._stereoRenderer.setMono(this.state.isMono);
+      // TODO(@sompylasar): We may need to reset `this._webvrManager` here to enable VR after stereo has been enabled.
     }
     if (
       this.props.autoPresent &&
@@ -184,6 +185,9 @@ class VRCanvas extends Component {
       .then(() => {
         if (!this._webvrManager.defaultDisplay) {
           throw new Error('No defaultDisplay, should fall back to fullscreen.');
+        }
+        if (this.state.isMono) {
+          throw new Error('Forced isMono, should fall back to fullscreen.');
         }
         return this._webvrManager.enterVR(this._webvrManager.defaultDisplay, this._glRenderer.domElement);
       })
