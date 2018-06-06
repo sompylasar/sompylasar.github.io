@@ -801,6 +801,10 @@ class SompylasarWebsiteVRScene extends Component {
     );
 
     const {
+      rendererSize,
+    } = this.props;
+
+    const {
       rayBaseColor,
       score,
       scoreChangeLast,
@@ -815,6 +819,13 @@ class SompylasarWebsiteVRScene extends Component {
     const scoreChangeDisplay = (scoreChangeVisible ? scoreChange : scoreChangeLast);
     const color = '#' + (new Color(rayBaseColor)).getHexString();
     const combo = ((scoreChangeVisible ? scoreChangeTimes : scoreChangeTimesLast) >= 3);
+    const rendererSizeMin = Math.min(rendererSize.width, rendererSize.height);
+    const fontSizeLarge = (rendererSizeMin > 400 ? 120 : 60);
+    const fontSizeMedium = fontSizeLarge / 2;
+    const fontSizeSmall = fontSizeMedium / 2;
+    const fontSizeLargePx = fontSizeLarge + 'px';
+    const fontSizeMediumPx = fontSizeMedium + 'px';
+    const fontSizeSmallPx = fontSizeSmall + 'px';
 
     return (
       <div>
@@ -830,8 +841,8 @@ class SompylasarWebsiteVRScene extends Component {
           textShadow: '0 0 10px ' + color,
           opacity: 0.8,
         }}>
-          <span style={{ fontSize: '30px' }}>{'Score: '}</span>
-          <span style={{ fontSize: '60px' }}>{score + scoreChange}</span>
+          <span style={{ fontSize: fontSizeSmallPx }}>{'Score: '}</span>
+          <span style={{ fontSize: fontSizeMediumPx }}>{score + scoreChange}</span>
         </div>
         <div style={{
           position: 'fixed',
@@ -847,9 +858,9 @@ class SompylasarWebsiteVRScene extends Component {
           {gameInit
             ? (
               <span>
-                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'SHOOT THE BOXES!'}</span><br />
-                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'WASD+arrows+Q+E or Gamepad to fly'}</span><br />
-                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'SPACEBAR to shoot'}</span>
+                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'SHOOT THE BOXES!'}</span><br />
+                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'WASD+arrows+Q+E or Gamepad to fly'}</span><br />
+                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'SPACEBAR to shoot'}</span>
               </span>
             )
             : null
@@ -857,14 +868,14 @@ class SompylasarWebsiteVRScene extends Component {
           {gameWin
             ? (
               <span>
-                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'YOU WIN!'}<br /></span>
-                <span style={{ fontSize: '60px', lineHeight: '60px' }}>{'RELOAD PAGE TO RESTART'}</span>
+                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'YOU WIN!'}<br /></span>
+                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'RELOAD PAGE TO RESTART'}</span>
               </span>
             )
             : (
               <span>
-                <span style={{ fontSize: '120px', lineHeight: '120px' }}>{scoreChangeDisplay ? '+' + scoreChangeDisplay : null}</span><br />
-                {combo && <span style={{ fontSize: '120px', lineHeight: '120px' }}>{'COMBO!'}</span>}
+                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{scoreChangeDisplay ? '+' + scoreChangeDisplay : null}</span><br />
+                {combo && <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'COMBO!'}</span>}
               </span>
             )
           }
