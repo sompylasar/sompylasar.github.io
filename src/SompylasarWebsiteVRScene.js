@@ -237,35 +237,70 @@ function createKeyboardHandler() {
 
 function createTouchHandler() {
   const _pressedKeys = new Map();
-  let _lastTouchIdentifier = null;
-  const SINGLE_TOUCH_KEY = 'SINGLE_TOUCH_KEY';
+  const _touches = [];
+  const SINGLE_TOUCH_KEY = '<singletouch>';
+  const DOUBLE_TOUCH_KEY = '<doubletouch>';
+  const TRIPLE_TOUCH_KEY = '<tripletouch>';
+  let _hasHandlers = false;
 
   function update(timeStep) {
     _pressedKeys.forEach((time, key) => { _pressedKeys.set(key, time + timeStep); });
   }
 
   function onTouchDown(event) {
-    if (_lastTouchIdentifier !== null) { return; }
-    _lastTouchIdentifier = event.changedTouches[0].identifier;
-    _pressedKeys.set(SINGLE_TOUCH_KEY, 0);
-    event.target.addEventListener('touchend', onTouchUp);
-    event.target.addEventListener('touchcancel', onTouchUp);
+    const touchId = event.changedTouches[0].identifier;
+    _touches.push(touchId);
+    if (_touches.length >= 3) {
+      if (!_pressedKeys.has(TRIPLE_TOUCH_KEY)) {
+        _pressedKeys.set(TRIPLE_TOUCH_KEY, 0);
+      }
+      _pressedKeys.delete(DOUBLE_TOUCH_KEY);
+      _pressedKeys.delete(SINGLE_TOUCH_KEY);
+    }
+    else if (_touches.length >= 2) {
+      if (!_pressedKeys.has(DOUBLE_TOUCH_KEY)) {
+        _pressedKeys.set(DOUBLE_TOUCH_KEY, 0);
+      }
+      _pressedKeys.delete(SINGLE_TOUCH_KEY);
+    }
+    else if (_touches.length >= 1) {
+      _pressedKeys.set(SINGLE_TOUCH_KEY, 0);
+    }
+    if (_touches.length === 1 && !_hasHandlers) {
+      _hasHandlers = true;
+      event.target.addEventListener('touchend', onTouchUp);
+      event.target.addEventListener('touchcancel', onTouchUp);
+    }
   }
 
   function onTouchUp(event) {
-    if (_lastTouchIdentifier !== event.changedTouches[0].identifier) { return; }
-    _lastTouchIdentifier = null;
-    _pressedKeys.delete(SINGLE_TOUCH_KEY);
-    event.target.removeEventListener('touchend', onTouchUp);
-    event.target.removeEventListener('touchcancel', onTouchUp);
+    const touchId = event.changedTouches[0].identifier;
+    const touchIdIndex = _touches.indexOf(touchId);
+    if (touchIdIndex >= 0) {
+      _touches.splice(touchIdIndex, 1);
+      if (_touches.length < 3) {
+        _pressedKeys.delete(TRIPLE_TOUCH_KEY);
+      }
+      if (_touches.length < 2) {
+        _pressedKeys.delete(DOUBLE_TOUCH_KEY);
+      }
+      if (_touches.length < 1) {
+        _pressedKeys.delete(SINGLE_TOUCH_KEY);
+      }
+    }
+    if (_touches.length === 0 && _hasHandlers) {
+      event.target.removeEventListener('touchend', onTouchUp);
+      event.target.removeEventListener('touchcancel', onTouchUp);
+      _hasHandlers = false;
+    }
   }
 
   function onLongTouch(event) {
     preventDefaultForEvent(event);
   }
 
-  function isDown() {
-    return _pressedKeys.has(SINGLE_TOUCH_KEY);
+  function isDown(key) {
+    return _pressedKeys.has(key);
   }
 
   function destroy() {
@@ -283,6 +318,43 @@ function createTouchHandler() {
   return {
     update: update,
     isDown: isDown,
+    destroy: destroy,
+  };
+}
+
+
+function createDeviceOrientationHandler() {
+  let _state = null;
+  const PI = Math.PI;
+
+  function update(timeStep) {
+
+  }
+
+  function onDeviceOrientation(event) {
+    event = event || { alpha: 0, beta: 0, gamma: 0 };
+    _state = _state || {};
+    _state.alpha = event.alpha;
+    _state.beta = event.beta;
+    _state.gamma = event.gamma;
+    _state.yaw = event.alpha / 180 * PI;
+    _state.pitch = event.beta / 180 * PI;
+    _state.roll = event.gamma / 180 * PI;
+  }
+
+  function getState() {
+    return _state;
+  }
+
+  function destroy() {
+    window.removeEventListener('deviceorientation', onDeviceOrientation);
+  }
+
+  window.addEventListener('deviceorientation', onDeviceOrientation);
+
+  return {
+    update: update,
+    getState: getState,
     destroy: destroy,
   };
 }
@@ -311,8 +383,8 @@ class SompylasarWebsiteVRScene extends Component {
     this._joymap.addModule(this._joymapQuery);
 
     this._keyboard = createKeyboardHandler();
-
     this._touch = createTouchHandler();
+    this._deviceOrientation = createDeviceOrientationHandler();
 
     this._gamepadLastActiveTime = 0;
     this._keyboardLastActiveTime = 0;
@@ -433,6 +505,7 @@ class SompylasarWebsiteVRScene extends Component {
   }
 
   componentWillUnmount() {
+    this._deviceOrientation.destroy();
     this._touch.destroy();
     this._keyboard.destroy();
     this.props.setUpdate(null);
@@ -549,6 +622,7 @@ class SompylasarWebsiteVRScene extends Component {
 
     this._keyboard.update(timeStep);
     this._touch.update(timeStep);
+    this._deviceOrientation.update(timeStep);
 
     let leftX = 0.3 * thresholdAbsMin(leftStick.value[0], 0.15);
     let leftY = 0.3 * (leftStick ? thresholdAbsMin(leftStick.value[1], 0.15) : 0);
@@ -558,6 +632,22 @@ class SompylasarWebsiteVRScene extends Component {
     let decel = (leftFlap ? thresholdAbsMin(leftFlap.value, 0.15) : 0);
     if (leftX !== 0 || leftY !== 0 || rightX !== 0 || rightY !== 0 || accel !== 0 || decel !== 0) {
       this._gamepadLastActiveTime = time;
+    }
+
+    const deviceOrientation = this._deviceOrientation.getState();
+    if (deviceOrientation) {
+      leftX = 0.1 * thresholdAbsMin((deviceOrientation.roll / Math.PI), 0.01);
+      leftY = 0.3 * thresholdAbsMin((deviceOrientation.pitch / Math.PI - 0.15), 0.01);
+      rightX = 0.3 * thresholdAbsMin((deviceOrientation.roll / Math.PI), 0.01);
+      rightY = 0;
+      accel = 0;
+      decel = 0;
+    }
+    if (this._touch.isDown('<doubletouch>')) {
+      accel = 1.5;
+    }
+    if (this._touch.isDown('<tripletouch>')) {
+      decel = 0.5;
     }
 
     const leftXKeyboard = 0.3 * ((this._keyboard.isDown('A') ? -1 : 0) + (this._keyboard.isDown('D') ? 1 : 0));
@@ -579,7 +669,7 @@ class SompylasarWebsiteVRScene extends Component {
       (rightStickButton && rightStickButton.value ? 1.0 : 0.0) ||
       (buttonA && buttonA.value ? 1.0 : 0.0) ||
       (this._keyboard.isDown('<space>') ? 1.0 : 0.0) ||
-      (this._touch.isDown() ? 1.0 : 0.0)
+      (this._touch.isDown('<singletouch>') ? 1.0 : 0.0)
     );
 
     if (this._keyboardLastActiveTime > this._gamepadLastActiveTime) {
