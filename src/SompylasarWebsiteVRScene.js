@@ -133,7 +133,6 @@ class LaserRay extends Object3D {
     this._rayEndMesh = rayEndMesh;
 
     this.add(this._rayMesh);
-    this.add(this._rayGlowMesh);
     this.add(this._rayEndMesh);
 
     this.render();
