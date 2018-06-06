@@ -33,6 +33,8 @@ import { BloomPass } from './three/BloomPass';
 import { FXAAShader } from './three/FXAAShader';
 import { CopyShader } from './three/CopyShader';
 
+import preventDefaultForEvent from './preventDefaultForEvent';
+
 
 const markerSize = 0.02;
 const markerGeometry = new BoxGeometry(markerSize, markerSize, markerSize);
@@ -233,6 +235,59 @@ function createKeyboardHandler() {
 }
 
 
+function createTouchHandler() {
+  const _pressedKeys = new Map();
+  let _lastTouchIdentifier = null;
+  const SINGLE_TOUCH_KEY = 'SINGLE_TOUCH_KEY';
+
+  function update(timeStep) {
+    _pressedKeys.forEach((time, key) => { _pressedKeys.set(key, time + timeStep); });
+  }
+
+  function onTouchDown(event) {
+    if (_lastTouchIdentifier !== null) { return; }
+    _lastTouchIdentifier = event.changedTouches[0].identifier;
+    _pressedKeys.set(SINGLE_TOUCH_KEY, 0);
+    event.target.addEventListener('touchend', onTouchUp);
+    event.target.addEventListener('touchcancel', onTouchUp);
+  }
+
+  function onTouchUp(event) {
+    if (_lastTouchIdentifier !== event.changedTouches[0].identifier) { return; }
+    _lastTouchIdentifier = null;
+    _pressedKeys.delete(SINGLE_TOUCH_KEY);
+    event.target.removeEventListener('touchend', onTouchUp);
+    event.target.removeEventListener('touchcancel', onTouchUp);
+  }
+
+  function onLongTouch(event) {
+    preventDefaultForEvent(event);
+  }
+
+  function isDown() {
+    return _pressedKeys.has(SINGLE_TOUCH_KEY);
+  }
+
+  function destroy() {
+    document.removeEventListener('touchstart', onTouchDown);
+    document.removeEventListener('touchend', onTouchUp);
+    document.removeEventListener('touchcancel', onTouchUp);
+    document.removeEventListener('contextmenu', onLongTouch);
+  }
+
+  document.addEventListener('touchstart', onTouchDown);
+  document.addEventListener('touchend', onTouchUp);
+  document.addEventListener('touchcancel', onTouchUp);
+  document.addEventListener('contextmenu', onLongTouch);
+
+  return {
+    update: update,
+    isDown: isDown,
+    destroy: destroy,
+  };
+}
+
+
 function thresholdAbsMin(value, valueMin) {
   return (Math.abs(value) < Math.abs(valueMin) ? 0 : value);
 }
@@ -256,6 +311,8 @@ class SompylasarWebsiteVRScene extends Component {
     this._joymap.addModule(this._joymapQuery);
 
     this._keyboard = createKeyboardHandler();
+
+    this._touch = createTouchHandler();
 
     this._gamepadLastActiveTime = 0;
     this._keyboardLastActiveTime = 0;
@@ -376,6 +433,7 @@ class SompylasarWebsiteVRScene extends Component {
   }
 
   componentWillUnmount() {
+    this._touch.destroy();
     this._keyboard.destroy();
     this.props.setUpdate(null);
     // Reset the saved state.
@@ -490,6 +548,7 @@ class SompylasarWebsiteVRScene extends Component {
     const rightFlap = this._joymapQuery.getButtons('R2');
 
     this._keyboard.update(timeStep);
+    this._touch.update(timeStep);
 
     let leftX = 0.3 * thresholdAbsMin(leftStick.value[0], 0.15);
     let leftY = 0.3 * (leftStick ? thresholdAbsMin(leftStick.value[1], 0.15) : 0);
@@ -519,7 +578,8 @@ class SompylasarWebsiteVRScene extends Component {
       (leftStickButton && leftStickButton.value ? 1.0 : 0.0) ||
       (rightStickButton && rightStickButton.value ? 1.0 : 0.0) ||
       (buttonA && buttonA.value ? 1.0 : 0.0) ||
-      (this._keyboard.isDown('<space>') ? 1.0 : 0.0)
+      (this._keyboard.isDown('<space>') ? 1.0 : 0.0) ||
+      (this._touch.isDown() ? 1.0 : 0.0)
     );
 
     if (this._keyboardLastActiveTime > this._gamepadLastActiveTime) {
@@ -818,7 +878,7 @@ class SompylasarWebsiteVRScene extends Component {
 
     const scoreChangeDisplay = (scoreChangeVisible ? scoreChange : scoreChangeLast);
     const color = '#' + (new Color(rayBaseColor)).getHexString();
-    const combo = ((scoreChangeVisible ? scoreChangeTimes : scoreChangeTimesLast) >= 3);
+    const combo = !!((scoreChangeVisible ? scoreChangeTimes : scoreChangeTimesLast) >= 3);
     const rendererSizeMin = Math.min(rendererSize.width, rendererSize.height);
     const fontSizeLarge = (rendererSizeMin > 400 ? 120 : 60);
     const fontSizeMedium = fontSizeLarge / 2;
@@ -857,26 +917,40 @@ class SompylasarWebsiteVRScene extends Component {
         }}>
           {gameInit
             ? (
-              <span>
-                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'SHOOT THE BOXES!'}</span><br />
-                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'WASD+arrows+Q+E or Gamepad to fly'}</span><br />
-                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'SPACEBAR to shoot'}</span>
-              </span>
+              <div>
+                <div style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>
+                  {'SHOOT THE BOXES!'}
+                </div>
+                <div style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>
+                  {'WASD+arrows+Q+E or Gamepad to fly'}
+                </div>
+                <div style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>
+                  {'SPACEBAR or TOUCH to shoot'}
+                </div>
+              </div>
             )
             : null
           }
           {gameWin
             ? (
-              <span>
-                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'YOU WIN!'}<br /></span>
-                <span style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>{'RELOAD PAGE TO RESTART'}</span>
-              </span>
+              <div>
+                <div style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>
+                  {'YOU WIN!'}
+                </div>
+                <div style={{ fontSize: fontSizeMediumPx, lineHeight: fontSizeMediumPx }}>
+                  {'RELOAD PAGE TO RESTART'}
+                </div>
+              </div>
             )
             : (
-              <span>
-                <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{scoreChangeDisplay ? '+' + scoreChangeDisplay : null}</span><br />
-                {combo && <span style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>{'COMBO!'}</span>}
-              </span>
+              <div>
+                <div style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>
+                  {scoreChangeDisplay ? '+' + scoreChangeDisplay : null}
+                </div>
+                {combo && <div style={{ fontSize: fontSizeLargePx, lineHeight: fontSizeLargePx }}>
+                  {'COMBO!'}
+                </div>}
+              </div>
             )
           }
         </div>
