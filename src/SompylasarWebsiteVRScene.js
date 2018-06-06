@@ -358,7 +358,7 @@ class SompylasarWebsiteVRScene extends Component {
 
   componentDidMount() {
     this._warnCount = 0;
-    const warn = console.warn;
+    const warn = this._consoleWarn = console.warn;
     console.warn = function (...args) {
       ++this._warnCount;
       if (this._warnCount > 10) {
@@ -381,6 +381,7 @@ class SompylasarWebsiteVRScene extends Component {
     // Reset the saved state.
     this.props.saveSceneState(null);
     clearTimeout(this._scoreChangeTimer);
+    console.warn = this._consoleWarn;
     document.body.style.overflow = '';
   }
 
