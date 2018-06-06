@@ -367,6 +367,7 @@ class SompylasarWebsiteVRScene extends Component {
       }
       return warn.apply(console, args);
     };
+    document.body.style.overflow = 'hidden';
   }
 
   componentDidUpdate() {
@@ -380,6 +381,7 @@ class SompylasarWebsiteVRScene extends Component {
     // Reset the saved state.
     this.props.saveSceneState(null);
     clearTimeout(this._scoreChangeTimer);
+    document.body.style.overflow = '';
   }
 
   _addCube() {

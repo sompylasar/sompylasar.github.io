@@ -150,7 +150,6 @@ class VRCanvas extends Component {
 
   _onContainerRef = (containerEl) => {
     if (containerEl) {
-      document.body.style.overflow = 'hidden';
       this._containerEl = containerEl;
       containerEl.appendChild(this._glRenderer.domElement);
       this._onContainerResize();
@@ -158,7 +157,6 @@ class VRCanvas extends Component {
     else if (this._containerEl) {
       this._containerEl.removeChild(this._glRenderer.domElement);
       this._containerEl = null;
-      document.body.style.overflow = '';
     }
   }
 
