@@ -50,6 +50,43 @@ function updateCameraFromVRDisplay(camera, vrDisplay) {
   }
 }
 
+/*
+This monkey-patch catches the error during invocation of requestFullscreen in webvr-ui:
+```
+Uncaught (in promise) TypeError: Failed to execute 'requestFullscreen' on 'Element': parameter 1 ('options') is not an object.
+    at Object.request (webvr-ui.js:407)
+    at t.value (webvr-ui.js:1410)
+    at VRCanvas.js:195
+```
+ */
+function _patchRequestFullscreen(element) {
+  if (
+    !Element.prototype.requestFullscreen ||
+    element.requestFullscreen !== Element.prototype.requestFullscreen
+  ) {
+    return;
+  }
+  const requestFullscreenOriginal = element.requestFullscreen;
+  function handleFullscreenError(error) {
+    if (
+      error.name === 'TypeError' &&
+      error.message === "Failed to execute 'requestFullscreen' on 'Element': parameter 1 ('options') is not an object."
+    ) {
+      requestFullscreenOriginal.call(element);
+    }
+    else {
+      throw error;
+    }
+  }
+  element.requestFullscreen = function requestFullscreen() {
+    try {
+      requestFullscreenOriginal.call(element).catch(handleFullscreenError);
+    }
+    catch (error) {
+      handleFullscreenError(error);
+    }
+  }
+}
 
 class VRCanvas extends Component {
   constructor(props) {
@@ -151,6 +188,7 @@ class VRCanvas extends Component {
 
   _onContainerRef = (containerEl) => {
     if (containerEl) {
+      _patchRequestFullscreen(containerEl);
       this._containerEl = containerEl;
       containerEl.appendChild(this._glRenderer.domElement);
       this._onContainerResize();
