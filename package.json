@@ -36,7 +36,7 @@
     "react": "16.0.0",
     "react-dom": "16.0.0",
     "react-motion": "0.5.2",
-    "three": "0.87.1",
+    "three": "0.137.0",
     "vkey": "1.0.1",
     "webvr-polyfill": "0.9.40",
     "webvr-ui": "0.10.0"
